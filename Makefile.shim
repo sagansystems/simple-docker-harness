@@ -1,0 +1,18 @@
+# This `Makefile` is intended to be included into other projects for the purpose of adding `Docker` capabilities
+# Include this file by adding `-include ../build-harness/Makefile.shim`
+
+BUILD_HARNESS_MAKEFILE ?= $(BUILD_HARNESS_PATH)/Makefile
+
+## Call docker targets
+docker\:%:
+	@make --no-print-directory -f "$(BUILD_HARNESS_MAKEFILE)" $@
+
+## Call docker machine targets
+machine\:%:
+	@make --no-print-directory -f "$(BUILD_HARNESS_MAKEFILE)" $@
+
+## Call CircleCI targets
+circle\:%:
+	@make --no-print-directory -f "$(BUILD_HARNESS_MAKEFILE)" $@
+
+
