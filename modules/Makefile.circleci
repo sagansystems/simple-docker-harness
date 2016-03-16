@@ -1,0 +1,32 @@
+DOCKER_DOWNLOAD_URL = https://s3-external-1.amazonaws.com/circle-downloads/docker-$(DOCKER_VERSION)-circleci
+DOCKER_CMD = /usr/bin/docker
+
+BUILD ?= $(CIRCLE_BRANCH)-$(CIRCLE_BUILD_NUM)
+COMMIT ?= $(CIRCLE_SHA1)
+RELEASE ?= release-$(shell date -u +'%Y%m%d%H%M%SZ')
+DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT) 
+
+.PHONY : circle\:tag circle\:release circle\:deps
+
+## Install CircleCI deps
+circle\:deps:
+	@echo "INFO: Installing Docker $(DOCKER_VERSION)"
+	@sudo curl -s -o $(DOCKER_CMD) $(DOCKER_DOWNLOAD_URL)
+	@sudo chmod 755 $(DOCKER_CMD)
+
+## Tag and push to registry (CircleCI)
+circle\:tag:
+	@$(call assert,CIRCLE_BRANCH)
+	@$(call assert,CIRCLE_BUILD_NUM)
+	@$(SELF) docker:login
+	@echo "INFO: Tagging $(CIRCLE_BRANCH)"
+	@$(SELF) DOCKER_TAG=$(CIRCLE_BRANCH) docker:tag docker:push
+	@echo "INFO: Releasing $(CIRCLE_BRANCH)-$(CIRCLE_BUILD_NUM)"
+	@$(SELF) DOCKER_TAG=$(CIRCLE_BRANCH)-$(CIRCLE_BUILD_NUM) docker:tag docker:push
+
+## Tag and push official release to registry (CircleCI)
+circle\:release:
+	@$(call assert,RELEASE)
+	@$(SELF) docker:login
+	@echo "INFO: Tagging $(RELEASE)"
+	@$(SELF) DOCKER_TAG=$(RELEASE) docker:tag docker:push

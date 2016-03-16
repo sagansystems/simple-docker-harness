@@ -1,0 +1,136 @@
+
+# Jot is for OSX, and shuf is for Linux
+RANDOM_PORT ?= $(shell jot -r 1  2000 65000 || shuf -i 2000-65000 -n 1)
+
+LOCAL_OS ?= $(shell uname -s)
+LOCAL_ARCH ?= $(shell uname -m)
+
+DOCKER_REGISTRY := index.docker.io
+DOCKER_NAMESPACE ?= sagan
+DOCKER_VERSION ?= 1.10.1
+
+DOCKER_CLIENT_VERSION = `$(DOCKER_CMD) version --format={{.Client.Version}} 2>/dev/null`
+DOCKER_SERVER_VERSION = `$(DOCKER_CMD) version --format={{.Server.Version}} 2>/dev/null`
+
+
+# These vars are are used by the `login` target.
+DOCKER_EMAIL ?=
+DOCKER_USER ?=
+DOCKER_PASS ?=
+
+# The image we're building - defaults to the current directory name
+DOCKER_IMAGE ?= $(subst -docker,,$(shell basename "`pwd`"))
+
+# Tag used when building image
+DOCKER_BUILD_TAG ?= dev
+
+# Tag used when tagging image built with DOCKER_BUILD_TAG and tag pushed to repo
+DOCKER_TAG ?= $(DOCKER_BUILD_TAG)
+
+# Docker Repository to push image to on registry
+DOCKER_REPOSITORY ?= $(DOCKER_NAMESPACE)/$(DOCKER_IMAGE)
+
+# Complete URI to docker image
+DOCKER_URI ?= $(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY):$(DOCKER_TAG)
+
+# Filename used for docker export
+DOCKER_EXPORT ?= $(DOCKER_NAMESPACE)-$(DOCKER_IMAGE)-$(DOCKER_TAG)-export.tar
+
+# Path to build (where the Dockerfile is located)
+DOCKER_BUILD_PATH ?= .
+
+# The default dockerfile name used
+DOCKER_FILE := Dockerfile
+
+# If attempting to start the container, this name will be used
+DOCKER_CONTAINER_NAME ?= test_$(DOCKER_IMAGE)
+
+DOCKER_BIND_PORT ?= $(RANDOM_PORT):80
+DOCKER_SHELL ?= /bin/bash
+
+# Docker client 
+DOCKER_CMD ?= $(MAKEFILE_DIR)/bin/docker-$(DOCKER_VERSION)
+
+# Arguments passed to "docker build"
+DOCKER_BUILD_OPTS ?=
+
+.PHONY : docker\:build docker\:push docker\:pull docker\:clean docker\:run docker\:shell docker\:attach docker\:update docker\:start docker\:stop docker\:rm docker\:logs 
+
+docker\:info:
+	@echo 'DOCKER_IMAGE=$(DOCKER_IMAGE)'
+	@echo 'DOCKER_BUILD_TAG=$(DOCKER_BUILD_TAG)'
+	@echo 'DOCKER_CONTAINER_NAME=$(DOCKER_CONTAINER_NAME)'
+	@echo 'DOCKER_CMD=$(DOCKER_CMD)'
+	@echo 'DOCKER_BUILD_OPTS=$(DOCKER_BUILD_OPTS)'
+	@echo 'DOCKER_NAMESPACE=$(DOCKER_NAMESPACE)'
+	@echo 'DOCKER_IMAGE=$(DOCKER_IMAGE)'
+	@echo 'DOCKER_TAG=$(DOCKER_TAG)'
+	@echo 'DOCKER_FILE=$(DOCKER_FILE)'
+	@echo 'DOCKER_REGISTRY=$(DOCKER_REGISTRY)'
+	@echo 'DOCKER_VERSION=$(DOCKER_VERSION)'
+	@echo 'DOCKER_URI=$(DOCKER_URI)'
+
+## Build a docker image
+docker\:build: env
+	@echo "INFO: Building $(DOCKER_IMAGE):$(DOCKER_BUILD_TAG) using $(DOCKER_BUILD_PATH)/$(DOCKER_FILE) on docker $(DOCKER_SERVER_VERSION)"
+	@cd $(DOCKER_BUILD_PATH) && $(DOCKER_CMD) build $(DOCKER_BUILD_OPTS) -t "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)" -f $(DOCKER_FILE) .
+
+## Push image to Docker Hub
+docker\:push: env
+	@echo "INFO: Pushing $(DOCKER_URI)"
+	@until $(DOCKER_CMD) push "$(DOCKER_URI)"; do sleep 1; done
+
+## Pull docker image from Docker Hub
+docker\:pull: env
+	@echo "INFO: Pulling $(DOCKER_URI)"
+	@$(DOCKER_CMD) pull "$(DOCKER_URI)"
+
+## Tag the last built image with `DOCKER_TAG`
+docker\:tag: env
+	@echo INFO: Tagging $(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG) as $(DOCKER_URI)
+	@$(DOCKER_CMD) tag "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)" "$(DOCKER_URI)"
+
+## Remove existing docker images
+docker\:clean: env
+	@echo INFO: Clean $(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG), $(DOCKER_URI)
+	@$(DOCKER_CMD) rmi -f "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)"
+	@$(DOCKER_CMD) rmi -f "$(DOCKER_URI)"
+	$(eval DOCKER_BUILD_OPTS += --no-cache=true)
+
+## Test drive the image
+docker\:run: env
+	@echo "INFO: Running $(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG) as $(DOCKER_CONTAINER_NAME)"
+	@$(DOCKER_CMD) run --name "$(DOCKER_CONTAINER_NAME)" --rm -p "$(DOCKER_BIND_PORT)" -t -i "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)"
+
+## Run the container and start a shell
+docker\:shell: env
+	@echo INFO: Starting shell in $(DOCKER_IMAGE) as $(DOCKER_CONTAINER_NAME) with $(DOCKER_BIND_PORT)
+	@$(DOCKER_CMD) run --name "$(DOCKER_CONTAINER_NAME)" --rm -p "$(DOCKER_BIND_PORT)" -t -i --volume "$(shell pwd):/opt" --entrypoint="$(DOCKER_SHELL)"  "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)" -c $(DOCKER_SHELL)
+
+## Attach to the running container
+docker\:attach: env
+	@echo INFO: Attaching to $(DOCKER_CONTAINER_NAME)
+	@$(DOCKER_CMD) exec -i -t  "$(DOCKER_CONTAINER_NAME)" $(DOCKER_SHELL)
+
+## Login to docker registry
+docker\:login: env
+	@$(call assert,DOCKER_EMAIL)
+	@$(call assert,DOCKER_USER)
+	@$(call assert,DOCKER_PASS)
+	@echo "INFO: Logging in as $(DOCKER_USER)"
+	@$(DOCKER_CMD) login -e $(DOCKER_EMAIL) -u $(DOCKER_USER) -p $(DOCKER_PASS)
+
+## Export docker images to file
+docker\:export:
+	@$(call assert,DOCKER_IMAGE)
+	@$(call assert,DOCKER_TAG)
+	@$(call assert,DOCKER_EXPORT)
+	@echo INFO: Exporting $(DOCKER_NAMESPACE)/$(DOCKER_IMAGE):$(DOCKER_TAG) to $(DOCKER_EXPORT)
+	@docker save $(DOCKER_NAMESPACE)/$(DOCKER_IMAGE):$(DOCKER_TAG) > $(DOCKER_EXPORT)
+
+## Import docker images from file
+docker\:import:
+	@$(call assert,DOCKER_EXPORT)
+	@echo INFO: Importing $(DOCKER_EXPORT)
+	@docker load -i $(DOCKER_EXPORT)
+
