@@ -88,5 +88,7 @@ deployment:
   master:
     branch: "master"
     commands:
-      - "make circle:release"
+     - make docker:tag:
+         environment:
+           DOCKER_TAG: latest
 ```
