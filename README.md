@@ -1,3 +1,14 @@
+<!-- MarkdownTOC -->
+
+- [Build Harness](#build-harness)
+  - [General](#general)
+  - [Setting up your development environment](#setting-up-your-development-environment)
+  - [Using Build Harness in other repositories](#using-build-harness-in-other-repositories)
+  - [Building images](#building-images)
+  - [CircleCI Integration](#circleci-integration)
+
+<!-- /MarkdownTOC -->
+
 # Build Harness
 
 Facilitate building and releasing docker containers
@@ -37,6 +48,11 @@ Run `make help` to get a list of available build targets
   circle:tag                Tag and push to registry (CircleCI)
   circle:release            Tag and push official release to registry (CircleCI)
 ```
+
+## Setting up your development environment
+
+1. Clone this repository into your development environment
+2. Define `BUILD_HARNESS_PATH` in your shell to be the path to where you checked out the repo. You will want to add this to your `~/.profile|~/.bashrc|~/.bash_profile|~/.zshrc`
 
 ## Using Build Harness in other repositories
 
