@@ -16,8 +16,8 @@ circle\:deps:
 
 ## Tag and push to registry (CircleCI)
 circle\:tag:
-	@$(call assert,CIRCLE_BRANCH)
-	@$(call assert,CIRCLE_BUILD_NUM)
+	@$(call assert_set,CIRCLE_BRANCH)
+	@$(call assert_set,CIRCLE_BUILD_NUM)
 	@$(SELF) docker:login
 	@echo "INFO: Tagging $(CIRCLE_BRANCH)"
 	@$(SELF) DOCKER_TAG=$(CIRCLE_BRANCH) docker:tag docker:push
@@ -26,7 +26,7 @@ circle\:tag:
 
 ## Tag and push official release to registry (CircleCI)
 circle\:release:
-	@$(call assert,RELEASE)
+	@$(call assert_set,RELEASE)
 	@$(SELF) docker:login
 	@echo "INFO: Tagging $(RELEASE)"
 	@$(SELF) DOCKER_TAG=$(RELEASE) docker:tag docker:push
