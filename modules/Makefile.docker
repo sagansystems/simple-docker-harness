@@ -57,18 +57,20 @@ DOCKER_BUILD_OPTS ?=
 .PHONY : docker\:build docker\:push docker\:pull docker\:clean docker\:run docker\:shell docker\:attach docker\:update docker\:start docker\:stop docker\:rm docker\:logs 
 
 docker\:info:
-	@echo 'DOCKER_IMAGE=$(DOCKER_IMAGE)'
-	@echo 'DOCKER_BUILD_TAG=$(DOCKER_BUILD_TAG)'
-	@echo 'DOCKER_CONTAINER_NAME=$(DOCKER_CONTAINER_NAME)'
-	@echo 'DOCKER_CMD=$(DOCKER_CMD)'
-	@echo 'DOCKER_BUILD_OPTS=$(DOCKER_BUILD_OPTS)'
-	@echo 'DOCKER_NAMESPACE=$(DOCKER_NAMESPACE)'
-	@echo 'DOCKER_IMAGE=$(DOCKER_IMAGE)'
-	@echo 'DOCKER_TAG=$(DOCKER_TAG)'
-	@echo 'DOCKER_FILE=$(DOCKER_FILE)'
-	@echo 'DOCKER_REGISTRY=$(DOCKER_REGISTRY)'
-	@echo 'DOCKER_VERSION=$(DOCKER_VERSION)'
-	@echo 'DOCKER_URI=$(DOCKER_URI)'
+	@echo "DOCKER_IMAGE=$(DOCKER_IMAGE)"
+	@echo "DOCKER_BUILD_TAG=$(DOCKER_BUILD_TAG)"
+	@echo "DOCKER_CONTAINER_NAME=$(DOCKER_CONTAINER_NAME)"
+	@echo "DOCKER_CMD=$(DOCKER_CMD)"
+	@echo "DOCKER_BUILD_OPTS=$(DOCKER_BUILD_OPTS)"
+	@echo "DOCKER_NAMESPACE=$(DOCKER_NAMESPACE)"
+	@echo "DOCKER_IMAGE=$(DOCKER_IMAGE)"
+	@echo "DOCKER_TAG=$(DOCKER_TAG)"
+	@echo "DOCKER_FILE=$(DOCKER_FILE)"
+	@echo "DOCKER_REGISTRY=$(DOCKER_REGISTRY)"
+	@echo "DOCKER_VERSION=$(DOCKER_VERSION)"
+	@echo "DOCKER_URI=$(DOCKER_URI)"
+	@echo "DOCKER_CLIENT_VERSION=$(DOCKER_CLIENT_VERSION)"
+	@echo "DOCKER_SERVER_VERSION=$(DOCKER_SERVER_VERSION)"
 
 ## Build a docker image
 docker\:build: env
@@ -84,6 +86,10 @@ docker\:push: env
 docker\:pull: env
 	@echo "INFO: Pulling $(DOCKER_URI)"
 	@$(DOCKER_CMD) pull "$(DOCKER_URI)"
+
+docker\:test:
+	@$(DOCKER_CMD) version 2>&1 >/dev/null | grep 'Error response from daemon'; [ $$? -ne 0 ]
+	@echo "OK"
 
 ## Tag the last built image with `DOCKER_TAG`
 docker\:tag: env
