@@ -1,6 +1,12 @@
+PACKAGE_NAME := build-harness
 MAKEFILE_PATH := $(strip $(MAKEFILE_LIST))
 MAKEFILE_DIR := $(shell dirname "$(MAKEFILE_PATH)")
 SELF = make -f $(MAKEFILE_PATH)
+
+# Formatting codes
+green = \x1b[32;01m$1\x1b[0m
+yellow = \x1b[33;01m$1\x1b[0m
+red = \x1b[33;31m$1\x1b[0m
 
 define print
 	@echo "$@: $1"
@@ -21,11 +27,14 @@ endif
 # Include the docker-specific targets
 include $(MAKEFILE_DIR)/modules/Makefile.docker
 
+# Include help targets
+include $(MAKEFILE_DIR)/modules/Makefile.help
+
 .PHONY : help env deps
 
 .DEFAULT_GOAL := help
 
-## Configure all dependencies
+# (private) Configure all dependencies
 deps:
 	@[ -d $(MAKEFILE_DIR)/bin ] || mkdir -p $(MAKEFILE_DIR)/bin/
 	@[ -z "$(DEPS_TARGETS)" ] || $(SELF) $(DEPS_TARGETS)
@@ -34,18 +43,3 @@ deps:
 env: deps
 	$(eval -include $(MAKEFILE_PATH).env)
 
-## This help screen
-help:
-	@printf "Available targets:\n\n"
-	@awk '/^[a-zA-Z\-\_0-9%:\\]+:/ { \
-	  helpMessage = match(lastLine, /^## (.*)/); \
-	  if (helpMessage) { \
-	    helpCommand = $$1; \
-	    helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
-      gsub("\\\\", "", helpCommand); \
-      gsub(":$$", "", helpCommand); \
-	    printf "  %-25s %s\n", helpCommand, helpMessage; \
-	  } \
-	} \
-	{ lastLine = $$0 }' $(MAKEFILE_LIST)
-	@printf "\n"

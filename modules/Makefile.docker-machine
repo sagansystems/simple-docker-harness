@@ -16,10 +16,6 @@ machine\:deps:
 	@(docker-machine status $(DOCKER_MACHINE_NAME) 2>&1 | grep -q "does not exist"; [ $$? -ne 0 ]) || $(SELF) machine:create
 	@(docker-machine status $(DOCKER_MACHINE_NAME) 2>&1 | grep -q "^Running") || $(SELF) machine:start
 	@docker-machine env $(DOCKER_MACHINE_NAME) | tr -d '"' > "$(MAKEFILE_PATH).env"
-	$(eval -include $(MAKEFILE_PATH).env)
-	@$(call assert,DOCKER_HOST)
-	@$(call assert,DOCKER_CERT_PATH)
-	@$(DOCKER_CMD) version 2>&1 >/dev/null | grep 'Error response from daemon'; [ $$? -ne 0 ]
 
 ## Docker Machine Info
 machine\:info:

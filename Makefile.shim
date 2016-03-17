@@ -1,18 +1,15 @@
 # This `Makefile` is intended to be included into other projects for the purpose of adding `Docker` capabilities
-# Include this file by adding `-include ../build-harness/Makefile.shim`
-
+PACKAGE_NAME = $(shell basename `pwd`)
 BUILD_HARNESS_MAKEFILE ?= $(BUILD_HARNESS_PATH)/Makefile
+BUILD_NAMESPACES=docker\:% machine\:% circle\:% 
+MAKEFILE_LIST += $(BUILD_HARNESS_MAKEFILE)
 
-## Call docker targets
-docker\:%:
+include $(BUILD_HARNESS_PATH)/modules/Makefile.help
+
+# Expose various namespaces from build-harness
+$(BUILD_NAMESPACES):
 	@make --no-print-directory -f "$(BUILD_HARNESS_MAKEFILE)" $@
 
-## Call docker machine targets
-machine\:%:
+# Expose help target from build-harness (double (::) allows a target to be extended)
+help::
 	@make --no-print-directory -f "$(BUILD_HARNESS_MAKEFILE)" $@
-
-## Call CircleCI targets
-circle\:%:
-	@make --no-print-directory -f "$(BUILD_HARNESS_MAKEFILE)" $@
-
-
