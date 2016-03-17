@@ -12,9 +12,14 @@ define print
 	@echo "$@: $1"
 endef
 
-# Ensures that a variable is defined
+# Ensures that a variable is exported
 define assert
-  @[ -n "$$$1" ] || (echo "$(1) not defined in $(@)"; exit 1)
+  @[ -n "$$$1" ] || (echo "$(1) not exported in $(@)"; exit 1)
+endef
+
+# Ensures that a variable is set
+define assert_set
+  @[ -n "$($1)" ] || (echo "$(1) not set in $(@)"; exit 1)
 endef
 
 # Setup the docker run-time environment

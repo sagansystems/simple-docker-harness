@@ -120,23 +120,23 @@ docker\:attach: env
 
 ## Login to docker registry
 docker\:login: env
-	@$(call assert,DOCKER_EMAIL)
-	@$(call assert,DOCKER_USER)
-	@$(call assert,DOCKER_PASS)
+	@$(call assert_set,DOCKER_EMAIL)
+	@$(call assert_set,DOCKER_USER)
+	@$(call assert_set,DOCKER_PASS)
 	@echo "INFO: Logging in as $(DOCKER_USER)"
 	@$(DOCKER_CMD) login -e $(DOCKER_EMAIL) -u $(DOCKER_USER) -p $(DOCKER_PASS)
 
 ## Export docker images to file
 docker\:export:
-	@$(call assert,DOCKER_IMAGE)
-	@$(call assert,DOCKER_TAG)
-	@$(call assert,DOCKER_EXPORT)
+	@$(call assert_set,DOCKER_IMAGE)
+	@$(call assert_set,DOCKER_TAG)
+	@$(call assert_set,DOCKER_EXPORT)
 	@echo INFO: Exporting $(DOCKER_NAMESPACE)/$(DOCKER_IMAGE):$(DOCKER_TAG) to $(DOCKER_EXPORT)
 	@docker save $(DOCKER_NAMESPACE)/$(DOCKER_IMAGE):$(DOCKER_TAG) > $(DOCKER_EXPORT)
 
 ## Import docker images from file
 docker\:import:
-	@$(call assert,DOCKER_EXPORT)
+	@$(call assert_set,DOCKER_EXPORT)
 	@echo INFO: Importing $(DOCKER_EXPORT)
 	@docker load -i $(DOCKER_EXPORT)
 
