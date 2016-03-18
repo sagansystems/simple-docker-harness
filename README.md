@@ -111,7 +111,7 @@ deployment:
       - make circle:tag          # Tag and publish using branch and build number
       - make circle:tag-latest   # Tag as latest, only on master
 
-  all:
+  else:
     branch: "/.*/"               # All other branches, tag and publish using branch and build number
     commands:
       - make circle:tag
