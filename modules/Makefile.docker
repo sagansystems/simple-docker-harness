@@ -22,7 +22,7 @@ DOCKER_PASS ?=
 DOCKER_IMAGE ?= $(subst -docker,,$(shell basename "`pwd`"))
 
 # Tag used when building image
-DOCKER_BUILD_TAG ?= dev
+DOCKER_BUILD_TAG ?= latest
 
 # Tag used when tagging image built with DOCKER_BUILD_TAG and tag pushed to repo
 DOCKER_TAG ?= $(DOCKER_BUILD_TAG)
