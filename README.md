@@ -95,16 +95,25 @@ machine:
     - "curl --retry 5 --retry-delay 1 https://raw.githubusercontent.com/sagansystems/build-harness/master/bin/circleci.sh | bash -x -s 1.9.1"
   services:
     - "docker"
+
+dependencies:
+  post:
+    - make docker:build
+
 test:
   override:
-    - "make docker:build"
-  post:
-    - "make circle:tag"
+    - make test
+
 deployment:
   master:
     branch: "master"
     commands:
-     - make docker:tag:
-         environment:
-           DOCKER_TAG: latest
+      - make circle:tag          # Tag and publish using branch and build number
+      - make circle:tag-latest   # Tag as latest, only on master
+
+  all:
+    branch: "/.*/"               # All other branches, tag and publish using branch and build number
+    commands:
+      - make circle:tag
+
 ```
