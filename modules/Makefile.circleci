@@ -28,7 +28,7 @@ circle\:tag:
 circle\:tag-latest:
 	@$(SELF) docker:login
 	@echo "INFO: Tagging latest"
-	@$(SELF) DOCKER_TAG=latest docker:tag docker:push
+	@$(SELF) DOCKER_TAG=latest docker:push
 
 ## Tag and push official release to registry (CircleCI)
 circle\:release:
