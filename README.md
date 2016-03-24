@@ -110,10 +110,22 @@ deployment:
     commands:
       - make circle:tag          # Tag and publish using branch and build number
       - make circle:tag-latest   # Tag as latest, only on master
+      - make kubernetes:deploy:  # Deloy to master.gladly.com
+        environment:
+          CLUSTER_NAMESPACE: master 
+          CLUSTER_DOMAIN: gladly.com
+
+  daren:
+    branch: "daren"
+    commands:
+      - make circle:tag          # Tag and publish using branch and build number
+      - make circle:tag-latest   # Tag as latest, only on master
+      - make kubernetes:deploy:
+        environment:
+          CLUSTER_NAMESPACE: daren 
 
   else:
     branch: "/.*/"               # All other branches, tag and publish using branch and build number
     commands:
       - make circle:tag
-
 ```
