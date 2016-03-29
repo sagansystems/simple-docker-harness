@@ -1,0 +1,10 @@
+{
+  "title": "Deploying $KUBERNETES_APP-$CIRCLE_BUILD_NUM to $CLUSTER_NAMESPACE",
+  "text": "Deploying $KUBERNETES_APP build $CIRCLE_BUILD_NUM from branch $CIRCLE_BRANCH to $CLUSTER_NAMESPACE",
+  "priority": "normal",
+  "tags": ["namespace:$CLUSTER_NAMESPACE","app:$KUBERNETES_APP","image:$IMAGE_TAG","build_number:$CIRCLE_BUILD_NUM","branch:$CIRCLE_BRANCH"],
+  "alert_type": "info",
+  "source_type_name": "circleci",
+  "aggregation_key": "$CLUSTER_NAMESPACE-$KUBERNETES_APP-$CIRCLE_BUILD_NUM"
+}
+

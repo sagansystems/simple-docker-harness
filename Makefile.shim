@@ -1,7 +1,7 @@
 # This `Makefile` is intended to be included into other projects for the purpose of adding `Docker` capabilities
 PACKAGE_NAME = $(shell basename `pwd`)
 BUILD_HARNESS_MAKEFILE ?= $(BUILD_HARNESS_PATH)/Makefile
-BUILD_NAMESPACES=docker\:% machine\:% circle\:% 
+BUILD_NAMESPACES=docker\:% machine\:% circle\:% kubernetes\:% datadog\:%
 MAKEFILE_LIST += $(BUILD_HARNESS_MAKEFILE)
 
 include $(BUILD_HARNESS_PATH)/modules/Makefile.help

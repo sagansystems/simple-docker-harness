@@ -11,7 +11,7 @@ help::
 	    helpMessage = substr(lastLine, RSTART + 3, RLENGTH); \
       gsub("\\\\", "", helpCommand); \
       gsub(":+$$", "", helpCommand); \
-	    printf "  $(call green,%-25s) %s\n", helpCommand, helpMessage; \
+	    printf "  $(call green,%-35s) %s\n", helpCommand, helpMessage; \
 	  } \
 	} \
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)

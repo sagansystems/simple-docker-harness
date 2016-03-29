@@ -1,0 +1,116 @@
+CLUSTER_NAMESPACE ?= 
+CLUSTER_DOMAIN ?= mertslounge.ca
+CLUSTER_BASTION ?= bastion.$(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN)
+export CLUSTER_NAMESPACE
+  
+KUBERNETES_APP ?= $(subst -docker,,$(shell basename "`pwd`"))
+KUBERNETES_RESOURCE_PATH ?= ./kubernetes
+export KUBERNETES_APP
+
+# Kubectl specific settings
+KUBECTL ?= /opt/bin/kubectl
+KUBECTL_SCHEMA_CACHE_DIR ?= --schema-cache-dir=.kube/cache
+KUBECTL_SSH_CMD := ssh -A -o 'BatchMode=yes' -o 'LogLevel=error' -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null'
+# Optionally define an SSH command to use for tunneling kubectl commands
+KUBECTL_SSH_TUNNEL ?= $(KUBECTL_SSH_USER)@$(CLUSTER_BASTION)
+
+# Serial number optionally used for versioning; select the last 5 characters of unix time (24 character limit to resource names in k8s)
+SERIAL ?= $(shell echo -n $$(date +%s) | tail -c 5)
+export SERIAL
+
+define kubectl_create
+	@echo -e "INFO: Creating $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@envsubst < "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml" | envsubst | $(KUBECTL_CMD) create $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+endef
+
+define kubectl_delete
+	@echo -e "INFO: Deleteting $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@envsubst < "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml" | envsubst | $(KUBECTL_CMD) delete --ignore-not-found=true -f -
+endef
+
+ifeq ($(CIRCLECI),true)
+  KUBECTL_SSH_CMD += -i '$(HOME)/.ssh/id_circleci_github'
+  KUBECTL_SSH_USER ?= saganbot
+  CLUSTER_NAMESPACE ?= $(CIRCLE_BRANCH)
+endif
+
+ifeq ($(strip $(KUBECTL_SSH_USER)),)
+  # Guess their github username
+	KUBECTL_SSH_USER = $(shell ssh git@github.com 2>&1 | grep 'successfully authenticated' | cut -d' ' -f2 | cut -d'!' -f1)
+endif
+
+# Add the SSH endpoint to the command; everything after the host is expected to be a remote command
+KUBECTL_SSH_CMD += $(KUBECTL_SSH_TUNNEL)
+
+KUBECTL_CMD ?= $(KUBECTL_SSH_CMD) "$(KUBECTL)" --logtostderr=true --insecure-skip-tls-verify=true  
+
+#
+# Reference Docs:
+#  - https://cloud.google.com/container-engine/docs/kubectl/
+#
+## Display info about the kubernetes setup
+kubernetes\:info:
+	@echo -e "Cluster Namespace: $(call yellow,$(CLUSTER_NAMESPACE))"
+	@echo -e "Cluster Domain: $(call yellow,$(CLUSTER_DOMAIN))"
+	@echo -e "SSH Tunnel: $(call yellow,$(KUBECTL_SSH_TUNNEL))"
+	@echo -e "SSH User: $(call yellow,$(KUBECTL_SSH_USER))"
+
+# (private) Create a new service
+kubernetes\:create-service:
+	$(call kubectl_create,service)
+
+# (private) Delete a new service
+kubernetes\:delete-service:
+	$(call kubectl_delete,service)
+
+# (private) Replace an existing service with downtime
+kubernetes\:replace-service:
+	@echo -e "INFO: Replacing $(KUBERNETES_APP) service on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@$(SELF) kubernetes:delete-service kubernetes:create-service
+
+# (private) Create a new controller
+kubernetes\:create-controller:
+	$(call kubectl_create,controller)
+
+# (private) Delete a new controller
+kubernetes\:delete-controller:
+	$(call kubectl_delete,controller)
+
+# (private) Replace an existing controller with downtime
+kubernetes\:replace-controller:
+	@echo -e "INFO: Replacing $(KUBERNETES_APP) controller on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@$(SELF) kubernetes:delete-controller kubernetes:create-controller
+
+# (private) Replace an app composed of a service and a controller with downtime
+kubernetes\:replace:
+	@$(SELF) kubernetes:replace-service kubernetes:replace-controller
+
+# (private) Update existing controller using rolling-update or create a new controller; do not notify datadog
+kubernetes\:deploy-controller:
+	$(eval CURRENT_CONTROLLER_NAME = $(shell $(KUBECTL_CMD) get rc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.name}" 2>/dev/null))
+	@if [ -z "$(CURRENT_CONTROLLER_NAME)" ]; then \
+  	$(SELF) kubernetes\:create-controller; \
+  else \
+		echo -e "INFO: Performing Rolling Update on $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."; \
+	  envsubst < "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" | envsubst | \
+    	$(KUBECTL_CMD) rolling-update $(CURRENT_CONTROLLER_NAME) $(KUBECTL_SCHEMA_CACHE_DIR) -f - ; \
+	fi
+
+# (private) Replace existing service causing downtime if serial of resource has changed or create a service if one does not already exist; do not notify datadog
+kubernetes\:deploy-service:
+	$(eval CURRENT_SERIAL = $(shell $(KUBECTL_CMD) get svc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.labels.serial}" 2>/dev/null))
+	$(eval NEXT_SERIAL = $(shell grep 'serial:' $(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml | cut -d'"' -f2))
+	@if [ "$(CURRENT_SERIAL)" == "$(NEXT_SERIAL)" ]; then \
+	  echo -e "INFO: Current serial $(CURRENT_SERIAL) is up to date for $(KUBERNETES_APP) service on cluster $(call yellow,$(CLUSTER_NAMESPACE)), skipping replacement"; \
+  else  \
+		echo -e "INFO: Serial changed from '$(CURRENT_SERIAL)' to '$(NEXT_SERIAL)'"; \
+	  $(SELF) kubernetes:replace; \
+  fi
+
+## Deploy controller and service; notify datadog
+kubernetes\:deploy:
+	$(NOTIFY_STARTING)
+	@$(SELF) kubernetes:deploy-controller kubernetes:deploy-service || $(NOTIFY_FAILURE)
+	$(NOTIFY_SUCCESS)
+
+
