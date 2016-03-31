@@ -16,13 +16,10 @@ circle\:deps:
 
 ## Tag using branch + build num and push to registry (CircleCI)
 circle\:tag:
-	@$(call assert_set,CIRCLE_BRANCH)
-	@$(call assert_set,CIRCLE_BUILD_NUM)
+	@$(call assert_set,BUILD)
 	@$(SELF) docker:login
-	@echo "INFO: Tagging $(CIRCLE_BRANCH)"
-	@$(SELF) DOCKER_TAG=$(CIRCLE_BRANCH) docker:tag docker:push
-	@echo "INFO: Tagging $(CIRCLE_BRANCH)-$(CIRCLE_BUILD_NUM)"
-	@$(SELF) DOCKER_TAG=$(CIRCLE_BRANCH)-$(CIRCLE_BUILD_NUM) docker:tag docker:push
+	@echo "INFO: Tagging $(BUILD)"
+	@$(SELF) DOCKER_TAG=$(BUILD) docker:tag docker:push
 
 ## Tag as latest and push to registry (CircleCI)
 circle\:tag-latest:
