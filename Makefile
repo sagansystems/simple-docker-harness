@@ -26,14 +26,16 @@ endef
 # Setup the docker run-time environment
 ifeq ($(CIRCLECI),true)
   include $(MAKEFILE_DIR)/modules/Makefile.circleci
-  include $(MAKEFILE_DIR)/modules/Makefile.kubernetes
-  include $(MAKEFILE_DIR)/modules/datadog/Makefile
 else
   include $(MAKEFILE_DIR)/modules/Makefile.docker-machine
 endif
 
 # Include the docker-specific targets
 include $(MAKEFILE_DIR)/modules/Makefile.docker
+
+# Include kubernetes deployment targets
+include $(MAKEFILE_DIR)/modules/datadog/Makefile
+include $(MAKEFILE_DIR)/modules/Makefile.kubernetes
 
 # Include help targets
 include $(MAKEFILE_DIR)/modules/Makefile.help
