@@ -1,7 +1,12 @@
 DOCKER_DOWNLOAD_URL = https://s3-external-1.amazonaws.com/circle-downloads/docker-$(DOCKER_VERSION)-circleci
 DOCKER_CMD = /usr/bin/docker
 
+ifdef CIRCLE_TAG
+BUILD ?= $(CIRCLE_TAG)
+else
 BUILD ?= $(CIRCLE_BRANCH)-$(CIRCLE_BUILD_NUM)
+endif
+
 COMMIT ?= $(CIRCLE_SHA1)
 RELEASE ?= release-$(shell date -u +'%Y%m%d%H%M%SZ')
 DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT) 
