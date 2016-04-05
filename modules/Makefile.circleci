@@ -14,7 +14,7 @@ circle\:deps:
 	@sudo curl -s -o $(DOCKER_CMD) $(DOCKER_DOWNLOAD_URL)
 	@sudo chmod 755 $(DOCKER_CMD)
 
-## Tag using branch + build num and push to registry (CircleCI)
+## Tag using BUILD version and push to registry (CircleCI)
 circle\:tag:
 	@$(call assert_set,BUILD)
 	@$(SELF) docker:login
