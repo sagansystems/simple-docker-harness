@@ -91,7 +91,7 @@ kubernetes\:deploy-controller:
 	@if [ -z "$(CURRENT_CONTROLLER_NAME)" ]; then \
   	$(SELF) kubernetes\:create-controller; \
   else \
-		echo -e "INFO: Performing Rolling Update on $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."; \
+		echo -e "INFO: Performing Rolling Update on $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))/$(CURRENT_CONTROLLER_NAME)..."; \
 	  envsubst < "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" | envsubst | \
     	$(KUBECTL_CMD) rolling-update $(CURRENT_CONTROLLER_NAME) $(KUBECTL_SCHEMA_CACHE_DIR) -f - ; \
 	fi

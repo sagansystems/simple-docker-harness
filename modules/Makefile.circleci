@@ -43,7 +43,7 @@ circle\:release:
 circle\:deploy-kubernetes:
 	$(call assert,CIRCLE_BRANCH)
 	@if [ -z "$(CIRCLE_TOKEN)" ]; then \
-    echo "WARN: Deploying $(RELEASE) without obtaining lock; CIRCLE_TOKEN not defined"; \
+    echo "$(call red,WARN:) Deploying $(RELEASE) without obtaining lock; CIRCLE_TOKEN not defined"; \
     $(SELF) kubernetes:info kubernetes:deploy; \
   else \
 	  echo "INFO: Deploying $(RELEASE)"; \
