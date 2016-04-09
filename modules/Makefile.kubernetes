@@ -87,13 +87,13 @@ kubernetes\:replace:
 
 # (private) Update existing controller using rolling-update or create a new controller; do not notify datadog
 kubernetes\:deploy-controller:
-	$(eval CURRENT_CONTROLLER_NAME = $(shell $(KUBECTL_CMD) get rc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true))
-	@if [ -z "$(CURRENT_CONTROLLER_NAME)" ]; then \
+	@CURRENT_CONTROLLER_NAME=$$($(KUBECTL_CMD) get rc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.name}" 2>/dev/null); \
+  if [ -z "$$CURRENT_CONTROLLER_NAME" ] || [ $$? -ne 0 ]; then \
   	$(SELF) kubernetes\:create-controller; \
   else \
-		echo -e "INFO: Performing Rolling Update on $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))/$(CURRENT_CONTROLLER_NAME)..."; \
+		echo -e "INFO: Performing Rolling Update on $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."; \
 	  envsubst < "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" | envsubst | \
-    	$(KUBECTL_CMD) rolling-update $(CURRENT_CONTROLLER_NAME) $(KUBECTL_SCHEMA_CACHE_DIR) -f - ; \
+    	$(KUBECTL_CMD) rolling-update $$CURRENT_CONTROLLER_NAME $(KUBECTL_SCHEMA_CACHE_DIR) -f - ; \
 	fi
 
 # (private) Replace existing service causing downtime if serial of resource has changed or create a service if one does not already exist; do not notify datadog
