@@ -87,7 +87,7 @@ kubernetes\:replace:
 
 # (private) Update existing controller using rolling-update or create a new controller; do not notify datadog
 kubernetes\:deploy-controller:
-	$(eval CURRENT_CONTROLLER_NAME = $(shell $(KUBECTL_CMD) get rc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.name}" 2>/dev/null))
+	$(eval CURRENT_CONTROLLER_NAME = $(shell $(KUBECTL_CMD) get rc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || true))
 	@if [ -z "$(CURRENT_CONTROLLER_NAME)" ]; then \
   	$(SELF) kubernetes\:create-controller; \
   else \
@@ -98,7 +98,7 @@ kubernetes\:deploy-controller:
 
 # (private) Replace existing service causing downtime if serial of resource has changed or create a service if one does not already exist; do not notify datadog
 kubernetes\:deploy-service:
-	$(eval CURRENT_SERIAL = $(shell $(KUBECTL_CMD) get svc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.labels.serial}" 2>/dev/null))
+	$(eval CURRENT_SERIAL = $(shell $(KUBECTL_CMD) get svc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.labels.serial}" 2>/dev/null || true))
 	$(eval NEXT_SERIAL = $(shell grep 'serial:' $(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml | cut -d'"' -f2))
 	@if [ "$(CURRENT_SERIAL)" == "$(NEXT_SERIAL)" ]; then \
 	  echo -e "INFO: Current serial $(CURRENT_SERIAL) is up to date for $(KUBERNETES_APP) service on cluster $(call yellow,$(CLUSTER_NAMESPACE)), skipping replacement"; \
