@@ -110,7 +110,8 @@ kubernetes\:deploy-service:
 ## Deploy controller and service; notify datadog
 kubernetes\:deploy:
 	$(NOTIFY_STARTING)
-	@$(SELF) kubernetes:deploy-controller kubernetes:deploy-service || $(NOTIFY_FAILURE)
+	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" ] || $(SELF) kubernetes:deploy-controller || $(NOTIFY_FAILURE)
+	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml" ] || $(SELF) kubernetes:deploy-service || $(NOTIFY_FAILURE)
 	$(NOTIFY_SUCCESS)
 
 
