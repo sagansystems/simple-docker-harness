@@ -1,8 +1,8 @@
-CLUSTER_NAMESPACE ?= 
+CLUSTER_NAMESPACE ?=
 CLUSTER_DOMAIN ?= mertslounge.ca
 CLUSTER_BASTION ?= bastion.$(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN)
 export CLUSTER_NAMESPACE
-  
+
 KUBERNETES_APP ?= $(subst -docker,,$(shell basename "`pwd`"))
 KUBERNETES_RESOURCE_PATH ?= ./kubernetes
 export KUBERNETES_APP
@@ -42,7 +42,7 @@ endif
 # Add the SSH endpoint to the command; everything after the host is expected to be a remote command
 KUBECTL_SSH_CMD += $(KUBECTL_SSH_TUNNEL)
 
-KUBECTL_CMD ?= $(KUBECTL_SSH_CMD) "$(KUBECTL)" --logtostderr=true --insecure-skip-tls-verify=true  
+KUBECTL_CMD ?= $(KUBECTL_SSH_CMD) "$(KUBECTL)" --logtostderr=true --insecure-skip-tls-verify=true
 
 #
 # Reference Docs:
@@ -88,12 +88,14 @@ kubernetes\:replace:
 # (private) Update existing controller using rolling-update or create a new controller; do not notify datadog
 kubernetes\:deploy-controller:
 	@CURRENT_CONTROLLER_NAME=$$($(KUBECTL_CMD) get rc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.name}" 2>/dev/null); \
-  if [ -z "$$CURRENT_CONTROLLER_NAME" ] || [ $$? -ne 0 ]; then \
-  	$(SELF) kubernetes\:create-controller; \
+	RESULT_CODE=$$?; \
+  if [ -z "$$CURRENT_CONTROLLER_NAME" ] || [ $$RESULT_CODE -ne 0 ]; then \
+		echo -e "INFO: No existing controller found for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE)), creating one ..."; \
+		$(SELF) kubernetes\:create-controller; \
   else \
 		echo -e "INFO: Performing Rolling Update on $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."; \
 	  envsubst < "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" | envsubst | \
-    	$(KUBECTL_CMD) rolling-update $$CURRENT_CONTROLLER_NAME $(KUBECTL_SCHEMA_CACHE_DIR) -f - ; \
+		$(KUBECTL_CMD) rolling-update $$CURRENT_CONTROLLER_NAME $(KUBECTL_SCHEMA_CACHE_DIR) -f - ; \
 	fi
 
 # (private) Replace existing service causing downtime if serial of resource has changed or create a service if one does not already exist; do not notify datadog
@@ -113,5 +115,3 @@ kubernetes\:deploy:
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" ] || $(SELF) kubernetes:deploy-controller || $(NOTIFY_FAILURE)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml" ] || $(SELF) kubernetes:deploy-service || $(NOTIFY_FAILURE)
 	$(NOTIFY_SUCCESS)
-
-
