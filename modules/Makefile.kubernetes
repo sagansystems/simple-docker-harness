@@ -115,3 +115,11 @@ kubernetes\:deploy:
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" ] || $(SELF) kubernetes:deploy-controller || $(NOTIFY_FAILURE)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml" ] || $(SELF) kubernetes:deploy-service || $(NOTIFY_FAILURE)
 	$(NOTIFY_SUCCESS)
+
+## List deployed replication controllers
+kubernetes\:list-rc:
+	@$(KUBECTL_CMD) get rc
+
+## List deployed services
+kubernetes\:list-svc:
+	@$(KUBECTL_CMD) get svc
