@@ -36,5 +36,17 @@ circle\:tag-latest:
 circle\:release:
 	@$(call assert_set,RELEASE)
 	@$(SELF) docker:login
-	@echo "INFO: Tagging $(RELEASE)"
+	@echo "INFO: Releasing $(RELEASE)"
 	@$(SELF) DOCKER_TAG=$(RELEASE) docker:tag docker:push
+
+## Deploy to kubernetes after obtaining an exclusive lock
+circle\:deploy-kubernetes:
+	$(call assert,CIRCLE_BRANCH)
+	@if [ -z "$(CIRCLE_TOKEN)" ]; then \
+    echo -e "$(call red,WARN:) Deploying $(RELEASE) without obtaining lock; CIRCLE_TOKEN not defined"; \
+    $(SELF) circle:tag kubernetes:info kubernetes:deploy; \
+  else \
+	  echo "INFO: Deploying $(RELEASE)"; \
+	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) circle:tag kubernetes:info kubernetes:deploy; \
+  fi
+
