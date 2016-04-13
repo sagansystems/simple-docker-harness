@@ -50,5 +50,5 @@ circle\:deploy-kubernetes:
 	  echo "INFO: Deploying $(RELEASE)"; \
 	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:deploy; \
   fi
-	$(SELF) kubernetes:list-rc kubernetes:list-svc
+	$(SELF) kubernetes:list-svc kubernetes:list-rc
 

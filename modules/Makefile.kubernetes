@@ -118,8 +118,10 @@ kubernetes\:deploy:
 
 ## List deployed replication controllers
 kubernetes\:list-rc:
+	@echo "Deployed Replication Controllers:"
 	@$(KUBECTL_CMD) get rc
 
 ## List deployed services
 kubernetes\:list-svc:
+	@echo "Deployed Services:"
 	@$(KUBECTL_CMD) get svc
