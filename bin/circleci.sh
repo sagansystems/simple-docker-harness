@@ -16,3 +16,4 @@ make -C $BUILD_HARNESS_PROJECT deps circle:deps
 # because as of 2016-04-25, the Ubuntu 14 (experimental) version
 # of CircleCI doesn't have it and it's needed for circle-do-exclusively.sh
 curl -LO https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 && sudo cp jq-linux64 /usr/local/bin/jq && (source ~/.bash_profile 2>/dev/null || source ~/.bashrc)
+sudo chown ubuntu:ubuntu /usr/local/bin/jq && chmod +x /usr/local/bin/jq
