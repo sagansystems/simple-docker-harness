@@ -8,8 +8,13 @@ BUILD ?= $(CIRCLE_BRANCH)-$(CIRCLE_BUILD_NUM)
 endif
 
 COMMIT ?= $(CIRCLE_SHA1)
+COMMIT_LOG ?= $(shell git log --format=oneline --pretty=format:'%s' -n 1 $(CIRCLE_SHA1))
 RELEASE ?= release-$(shell date -u +'%Y%m%d%H%M%SZ')
 DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT) 
+
+export COMMIT
+export COMMIT_LOG
+export RELEASE
 
 .PHONY : circle\:tag circle\:release circle\:deps
 
@@ -50,5 +55,3 @@ circle\:deploy-kubernetes:
 	  echo "INFO: Deploying $(RELEASE)"; \
 	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:deploy; \
   fi
-	$(SELF) kubernetes:list-rc kubernetes:list-svc
-
