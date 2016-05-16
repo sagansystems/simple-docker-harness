@@ -3,6 +3,7 @@ CLUSTER_DOMAIN ?= mertslounge.ca
 CLUSTER_BASTION ?= bastion.$(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN)
 export CLUSTER_NAMESPACE
 
+KUBERNETES_ANNOTATION ?= $(shell date -u +'%Y-%m-%d %H:%M:%SZ')
 KUBERNETES_APP ?= $(subst -docker,,$(shell basename "`pwd`"))
 KUBERNETES_RESOURCE_PATH ?= ./kubernetes
 export KUBERNETES_APP
@@ -100,7 +101,8 @@ kubernetes\:delete-deployment:
 kubernetes\:apply-deployment:
 	@echo -e "INFO: Applying updates to $(KUBERNETES_APP) deployment on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
 	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-deployment.yml) | \
-      $(KUBECTL_CMD) apply --record=false $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+      $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+	@$(KUBECTL_CMD) annotate deployment $(KUBERNETES_APP) "'kubernetes.io/change-cause=$(KUBERNETES_ANNOTATION)'"
 
 ## Rollback to previous deployment
 kubernetes\:undo-deployment:
