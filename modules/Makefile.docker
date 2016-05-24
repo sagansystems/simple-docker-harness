@@ -40,7 +40,7 @@ DOCKER_EXPORT ?= $(DOCKER_NAMESPACE)-$(DOCKER_IMAGE)-$(DOCKER_TAG)-export.tar
 DOCKER_BUILD_PATH ?= .
 
 # The default dockerfile name used
-DOCKER_FILE := Dockerfile
+DOCKER_FILE ?= Dockerfile
 
 # If attempting to start the container, this name will be used
 DOCKER_CONTAINER_NAME ?= test_$(DOCKER_IMAGE)
