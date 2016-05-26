@@ -46,6 +46,7 @@ circle\:release:
 
 ## Deploy to kubernetes after obtaining an exclusive lock
 circle\:deploy-kubernetes:
+	$(call assert,IMAGE_TAG)
 	$(call assert,CIRCLE_BRANCH)
 	$(SELF) circle:tag kubernetes:info
 	@if [ -z "$(CIRCLE_TOKEN)" ]; then \
