@@ -13,12 +13,4 @@ fi
 git clone -b $BUILD_HARNESS_BRANCH $GITHUB_REPO
 make -C $BUILD_HARNESS_PROJECT deps circle:deps
 
-# because as of 2016-04-25, the Ubuntu 14 (experimental) version
-# of CircleCI doesn't have it and it's needed for circle-do-exclusively.sh
-which jq >/dev/null
-if [ $? -ne 0 ]; then                                                                                                                                                                                                                                                                                                                                                     
-  sudo curl -s -q -L https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 -o /usr/local/bin/jq 
-  sudo chown ubuntu:ubuntu /usr/local/bin/jq
-  sudo chmod 755 /usr/local/bin/jq
-fi
 
