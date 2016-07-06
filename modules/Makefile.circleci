@@ -36,8 +36,9 @@ circle\:deps:
 circle\:tag:
 	@$(call assert_set,BUILD)
 	@$(SELF) docker:login
-	@echo "INFO: Tagging $(BUILD)"
+	@echo "INFO: Tagging $(COMMIT) as $(BUILD)"
 	@$(SELF) DOCKER_TAG=$(BUILD) docker:tag docker:push
+	@$(SELF) DOCKER_TAG=$(COMMIT) docker:tag docker:push
 
 ## Tag as latest and push to registry (CircleCI)
 circle\:tag-latest:
@@ -59,9 +60,11 @@ circle\:deploy-kubernetes:
 	@[ ! -f "$(DOCKER_FILE)" ] || $(SELF) circle:tag 
 	@$(SELF) kubernetes:info
 	@if [ -z "$(CIRCLE_TOKEN)" ]; then \
-	echo -e "$(call red,WARN:) Deploying $(RELEASE) without obtaining lock; CIRCLE_TOKEN not defined"; \
-	$(SELF) kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - $(COMMIT_LOG) ($(COMMIT))"; \
+	  echo -e "$(call red,WARN:) Deploying $(IMAGE_TAG) without obtaining lock; CIRCLE_TOKEN not defined"; \
+	  $(SELF) kubernetes:configure kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - $(COMMIT_LOG) ($(COMMIT))"; \
   else \
-	  echo "INFO: Deploying $(RELEASE)"; \
-	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:deploy; \
+	  echo "INFO: Deploying $(IMAGE_TAG)"; \
+	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:configure kubernetes:deploy; \
   fi
+	@sleep 3
+	@$(SELF) kubernetes:list-deployments kubernetes:list-rs kubernetes:list-pods

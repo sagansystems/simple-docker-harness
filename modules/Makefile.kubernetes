@@ -26,6 +26,11 @@ define envsubst
 	envsubst < "$(1)" | envsubst | tee $(DEBUG)
 endef
 
+define kubectl_apply
+	@echo -e "INFO: Applying changes to $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+endef
+
 define kubectl_create
 	@echo -e "INFO: Creating $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
 	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) create $(KUBECTL_SCHEMA_CACHE_DIR) -f -
@@ -63,96 +68,88 @@ kubernetes\:info:
 	@echo -e "SSH Tunnel: $(call yellow,$(KUBECTL_SSH_TUNNEL))"
 	@echo -e "SSH User: $(call yellow,$(KUBECTL_SSH_USER))"
 
-# (private) Create a new service
-kubernetes\:create-service:
-	$(call kubectl_create,service)
+# (private) Delete a horizontalpodautoscaler
+kubernetes\:delete-horizontalpodautoscaler:
+	$(call kubectl_delete,horizontalpodautoscaler)
 
+# (private) Update horizontalpodautoscaler or create, if necessary
+kubernetes\:apply-horizontalpodautoscaler:
+	$(call kubectl_apply,horizontalpodautoscaler)
+
+# (private) Delete a configmap
+kubernetes\:delete-configmap:
+	$(call kubectl_delete,configmap)
+
+# (private) Update configmap or create, if necessary
+kubernetes\:apply-configmap:
+	$(call kubectl_apply,configmap)
+
+# (private) Delete a secrets
+kubernetes\:delete-secrets:
+	$(call kubectl_delete,secrets)
+
+# (private) Update secrets or create, if necessary
+kubernetes\:apply-secrets:
+	$(call kubectl_apply,secrets)
+
+## Update app configmaps and secrets
+kubernetes\:configure:
+	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-configmap.yml" ] || $(SELF) kubernetes:apply-configmap || $(NOTIFY_FAILURE)
+	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-secrets.yml" ] || $(SELF) kubernetes:apply-secrets || $(NOTIFY_FAILURE)
+	
 # (private) Delete a service
 kubernetes\:delete-service:
 	$(call kubectl_delete,service)
 
-# (private) Replace an existing service with downtime
-kubernetes\:replace-service:
-	@echo -e "INFO: Replacing $(KUBERNETES_APP) service on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
-	@$(SELF) kubernetes:delete-service kubernetes:create-service
-
-# (private) Create a new controller
-kubernetes\:create-controller:
-	$(call kubectl_create,controller)
+# (private) Update service or create, if necessary
+kubernetes\:apply-service:
+	$(call kubectl_apply,service)
 
 # (private) Delete a controller
 kubernetes\:delete-controller:
 	$(call kubectl_delete,controller)
 
-# (private) Replace an existing controller with downtime
-kubernetes\:replace-controller:
-	@echo -e "INFO: Replacing $(KUBERNETES_APP) controller on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
-	@$(SELF) kubernetes:delete-controller kubernetes:create-controller
-
-# (private) Replace an app composed of a service and a controller with downtime
-kubernetes\:replace:
-	@$(SELF) kubernetes:replace-service kubernetes:replace-controller
+# (private) Update a controller or create, if necessary
+kubernetes\:apply-controller:
+	$(call kubectl_apply,controller)
 
 # (private) Delete a deploymentt
 kubernetes\:delete-deployment:
 	$(call kubectl_delete,deployment)
 
-# (private) Update existing controller using rolling-update or create a new controller; do not notify datadog
+# (private) Update existing deployment or create, if necessary
 kubernetes\:apply-deployment:
-	@echo -e "INFO: Applying updates to $(KUBERNETES_APP) deployment on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
-	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-deployment.yml) | \
-      $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) -f -
-	@$(KUBECTL_CMD) annotate deployment $(KUBERNETES_APP) "'kubernetes.io/change-cause=$(KUBERNETES_ANNOTATION)'"
+	$(call kubectl_apply,deployment)
 
 ## Rollback to previous deployment
 kubernetes\:undo-deployment:
 	@echo -e "INFO: Rolling back to previous deployment of $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
 	@$(KUBECTL_CMD) rollout undo deployment $(KUBERNETES_APP)
 
-# (private) Update existing controller using rolling-update or create a new controller; do not notify datadog
-kubernetes\:deploy-controller:
-	@CURRENT_CONTROLLER_NAME=$$($(KUBECTL_CMD) get rc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.name}" 2>/dev/null); \
-	RESULT_CODE=$$?; \
-  if [ -z "$$CURRENT_CONTROLLER_NAME" ] || [ $$RESULT_CODE -ne 0 ]; then \
-		echo -e "INFO: No existing controller found for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE)), creating one ..."; \
-		$(SELF) kubernetes:create-controller; \
-  else \
-		echo -e "INFO: Performing Rolling Update on $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."; \
-	  $(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml) | \
-		$(KUBECTL_CMD) rolling-update $$CURRENT_CONTROLLER_NAME $(KUBECTL_SCHEMA_CACHE_DIR) -f - ; \
-	fi
-	@$(SELF) kubernetes:list-rc
-
-# (private) Replace existing service causing downtime if serial of resource has changed or create a service if one does not already exist; do not notify datadog
-kubernetes\:deploy-service:
-	$(eval CURRENT_SERIAL = $(shell $(KUBECTL_CMD) get svc --selector="app=$(KUBERNETES_APP)" -o jsonpath="{.items[0].metadata.labels.serial}" 2>/dev/null || true))
-	$(eval NEXT_SERIAL = $(shell grep 'serial:' $(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml | cut -d'"' -f2))
-	@if [ "$(CURRENT_SERIAL)" == "$(NEXT_SERIAL)" ]; then \
-	  echo -e "INFO: Current serial $(CURRENT_SERIAL) is up to date for $(KUBERNETES_APP) service on cluster $(call yellow,$(CLUSTER_NAMESPACE)), skipping replacement"; \
-  else  \
-		echo -e "INFO: Serial changed from '$(CURRENT_SERIAL)' to '$(NEXT_SERIAL)'"; \
-	  $(SELF) kubernetes:replace-service; \
-  fi; \
-  $(SELF) kubernetes:list-svc
-
-## Deploy controller and service; notify datadog
+## Deploy everything that needs to be deployed; notify datadog
 kubernetes\:deploy:
 	@echo -e "INFO: Deploying $(KUBERNETES_APP) resources on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
 	$(NOTIFY_STARTING)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-deployment.yml" ] || $(SELF) kubernetes:apply-deployment || $(NOTIFY_FAILURE)
-	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" ] || $(SELF) kubernetes:deploy-controller || $(NOTIFY_FAILURE)
-	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml" ] || $(SELF) kubernetes:deploy-service || $(NOTIFY_FAILURE)
+	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" ] || $(SELF) kubernetes:apply-controller || $(NOTIFY_FAILURE)
+	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml" ] || $(SELF) kubernetes:apply-service || $(NOTIFY_FAILURE)
+	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-horizontalpodautoscaler.yml" ] || $(SELF) kubernetes:apply-horizontalpodautoscaler || $(NOTIFY_FAILURE)
 	$(NOTIFY_SUCCESS)
 
-## List deployed replication controllers
+## List deployed replication controllers for app
 kubernetes\:list-rc:
-	@echo -e "INFO: Listing replication controllers on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
-	@$(KUBECTL_CMD) get rc
+	@echo -e "INFO: Listing replication controllers for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@$(KUBECTL_CMD) get rc -L tag --selector app=$(KUBERNETES_APP)
 
-## List deployed replica sets
+## List deployed replica sets for app
 kubernetes\:list-rs:
-	@echo -e "INFO: Listing replica sets on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
-	@$(KUBECTL_CMD) get rs
+	@echo -e "INFO: Listing replica sets for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@$(KUBECTL_CMD) get rs -L tag --selector app=$(KUBERNETES_APP) | grep -Ev '\s+0\s+0\s+'
+
+## List deployed pods for app
+kubernetes\:list-pods:
+	@echo -e "INFO: Listing pods for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@$(KUBECTL_CMD) get pods -L tag --selector app=$(KUBERNETES_APP)
 
 ## List deployed services
 kubernetes\:list-svc:
@@ -160,8 +157,13 @@ kubernetes\:list-svc:
 	@$(KUBECTL_CMD) get svc
 
 ## Show deployment history
-kubernetes\:list-deployments:
+kubernetes\:deployment-history:
 	@echo -e "INFO: Listing deployments of $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
 	@$(KUBECTL_CMD) rollout history deployment $(KUBERNETES_APP)
+
+## List everything that's deployed
+kubernetes\:list-deployments:
+	@echo -e "INFO: Listing deployments on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@$(KUBECTL_CMD) get deployments -L tag
 
 
