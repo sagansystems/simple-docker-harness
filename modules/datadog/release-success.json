@@ -1,0 +1,9 @@
+{
+  "title": "Released $KUBERNETES_APP:$IMAGE_TAG to $CLUSTER_NAMESPACE",
+  "text": "Released $KUBERNETES_APP:$IMAGE_TAG to $CLUSTER_NAMESPACE",
+  "priority": "normal",
+  "tags": ["namespace:$CLUSTER_NAMESPACE","app:$KUBERNETES_APP","image:$IMAGE_TAG"],
+  "alert_type": "success",
+  "source_type_name": "release",
+  "aggregation_key": "$CLUSTER_NAMESPACE-$KUBERNETES_APP-$IMAGE_TAG"
+}
