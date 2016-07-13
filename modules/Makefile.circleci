@@ -45,6 +45,8 @@ circle\:tag-latest:
 	@$(SELF) docker:login
 	@echo "INFO: Tagging latest"
 	@$(SELF) DOCKER_TAG=latest docker:push
+	@git tag --force "$(CIRCLE_BRANCH)-docker-latest"
+	@git push origin --force "tags/$(CIRCLE_BRANCH)-docker-latest"
 
 ## Tag and push official release to registry (CircleCI)
 circle\:release:
