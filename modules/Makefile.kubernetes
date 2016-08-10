@@ -27,16 +27,22 @@ define envsubst
 endef
 
 define kubectl_apply
+	$(call assert,CLUSTER_NAMESPACE)
+	$(call assert,CLUSTER_DOMAIN)
 	@echo -e "INFO: Applying changes to $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
 	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) -f -
 endef
 
 define kubectl_create
+	$(call assert,CLUSTER_NAMESPACE)
+	$(call assert,CLUSTER_DOMAIN)
 	@echo -e "INFO: Creating $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
 	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) create $(KUBECTL_SCHEMA_CACHE_DIR) -f -
 endef
 
 define kubectl_delete
+	$(call assert,CLUSTER_NAMESPACE)
+	$(call assert,CLUSTER_DOMAIN)
 	@echo -e "INFO: Deleteting $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
 	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) delete --ignore-not-found=true -f -
 endef
@@ -67,6 +73,15 @@ kubernetes\:info:
 	@echo -e "Cluster Domain: $(call yellow,$(CLUSTER_DOMAIN))"
 	@echo -e "SSH Tunnel: $(call yellow,$(KUBECTL_SSH_TUNNEL))"
 	@echo -e "SSH User: $(call yellow,$(KUBECTL_SSH_USER))"
+
+# (private) Validate a configuration
+kubernetes\:validate:
+	@for env in $$(grep -Eo '\$$[A-Z_0-9]+' $(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-configmap.yml | cut -d\$$ -f2); do \
+    if [ -z "$${!env}" ]; then \
+      echo "$$env not defined in $(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-configmap.yml"; \
+      exit 1; \
+    fi; \
+  done
 
 # (private) Delete a horizontalpodautoscaler
 kubernetes\:delete-horizontalpodautoscaler:
@@ -135,6 +150,15 @@ kubernetes\:deploy:
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml" ] || $(SELF) kubernetes:apply-service || $(NOTIFY_FAILURE)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-horizontalpodautoscaler.yml" ] || $(SELF) kubernetes:apply-horizontalpodautoscaler || $(NOTIFY_FAILURE)
 	$(NOTIFY_SUCCESS)
+
+# (private) Delete a job
+kubernetes\:delete-job:
+	$(call kubectl_delete,job)
+
+## Run a job
+kubernetes\:run-job:
+	@$(SELF) kubernetes:delete-job >/dev/null 2>&1 || true
+	$(call kubectl_create,job)
 
 ## List deployed replication controllers for app
 kubernetes\:list-rc:
