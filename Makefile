@@ -26,8 +26,6 @@ endef
 # Setup the docker run-time environment
 ifeq ($(CIRCLECI),true)
   include $(MAKEFILE_DIR)/modules/Makefile.circleci
-else
-  include $(MAKEFILE_DIR)/modules/Makefile.docker-machine
 endif
 
 # Include the docker-specific targets

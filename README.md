@@ -22,14 +22,6 @@ Run `make help` to get a list of available build targets
 
   deps                      Configure all dependencies
   help                      This help screen
-  machine:deps              Setup dependencies for docker-machine
-  machine:info              Docker Machine Info
-  machine:recreate          Recreate the docker machine
-  machine:create            Create docker machine for environment
-  machine:destroy           Destroy docker machine for environment
-  machine:start             Start docker machine for environment
-  machine:stop              Stop docker machine for environment
-  machine:restart           Restart docker machine for environment
   docker:build              Build a docker image
   docker:push               Push image to Docker Hub
   docker:pull               Pull docker image from Docker Hub
@@ -74,9 +66,9 @@ Because we use a conditional assignment on the `BUILD_HARNESS_PATH`, it can alwa
 
 ## Building images
 
-Before building images, you must create your docker machine and initialize dependencies.
+Before building images, you must initialize dependencies.
 
-    make machine:create deps
+    make deps
 
 Then build the image
 
