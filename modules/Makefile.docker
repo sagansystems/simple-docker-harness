@@ -7,7 +7,6 @@ LOCAL_ARCH ?= $(shell uname -m)
 
 DOCKER_REGISTRY := index.docker.io
 DOCKER_NAMESPACE ?= sagan
-DOCKER_VERSION ?= 1.10.1
 
 DOCKER_CLIENT_VERSION = `$(DOCKER_CMD) version --format={{.Client.Version}} 2>/dev/null`
 DOCKER_SERVER_VERSION = `$(DOCKER_CMD) version --format={{.Server.Version}} 2>/dev/null`
@@ -49,14 +48,20 @@ DOCKER_BIND_PORT ?= $(RANDOM_PORT):80
 DOCKER_SHELL ?= /bin/bash
 
 # Docker client 
-DOCKER_CMD ?= $(MAKEFILE_DIR)/bin/docker-$(DOCKER_VERSION)
+DOCKER_CMD ?= $(shell which docker)
 
 # Arguments passed to "docker build"
 DOCKER_BUILD_OPTS ?=
 
 .PHONY : docker\:build docker\:push docker\:pull docker\:clean docker\:run docker\:shell docker\:attach docker\:update docker\:start docker\:stop docker\:rm docker\:logs 
 
+deps::
+	$(call assert_set DOCKER_CMD)
+	@[ -x $(DOCKER_CMD) ] || (echo "$(DOCKER_CMD) not executable"; exit 1)
+
+## Display info about the docker environment
 docker\:info:
+	@$(SELF) deps
 	@echo "DOCKER_IMAGE=$(DOCKER_IMAGE)"
 	@echo "DOCKER_BUILD_TAG=$(DOCKER_BUILD_TAG)"
 	@echo "DOCKER_CONTAINER_NAME=$(DOCKER_CONTAINER_NAME)"
@@ -67,23 +72,25 @@ docker\:info:
 	@echo "DOCKER_TAG=$(DOCKER_TAG)"
 	@echo "DOCKER_FILE=$(DOCKER_FILE)"
 	@echo "DOCKER_REGISTRY=$(DOCKER_REGISTRY)"
-	@echo "DOCKER_VERSION=$(DOCKER_VERSION)"
 	@echo "DOCKER_URI=$(DOCKER_URI)"
 	@echo "DOCKER_CLIENT_VERSION=$(DOCKER_CLIENT_VERSION)"
 	@echo "DOCKER_SERVER_VERSION=$(DOCKER_SERVER_VERSION)"
 
 ## Build a docker image
-docker\:build: env
+docker\:build:
+	@$(SELF) deps
 	@echo "INFO: Building $(DOCKER_IMAGE):$(DOCKER_BUILD_TAG) using $(DOCKER_BUILD_PATH)/$(DOCKER_FILE) on docker $(DOCKER_SERVER_VERSION) $(DOCKER_BUILD_OPTS)"
 	@cd $(DOCKER_BUILD_PATH) && $(DOCKER_CMD) build $(DOCKER_BUILD_OPTS) -t "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)" -f $(DOCKER_FILE) .
 
 ## Push image to Docker Hub
-docker\:push: env
+docker\:push:
+	@$(SELF) deps
 	@echo "INFO: Pushing $(DOCKER_URI)"
 	@until $(DOCKER_CMD) push "$(DOCKER_URI)"; do sleep 1; done
 
 ## Pull docker image from Docker Hub
-docker\:pull: env
+docker\:pull:
+	@$(SELF) deps
 	@echo "INFO: Pulling $(DOCKER_URI)"
 	@$(DOCKER_CMD) pull "$(DOCKER_URI)"
 
@@ -92,34 +99,40 @@ docker\:test:
 	@echo "OK"
 
 ## Tag the last built image with `DOCKER_TAG`
-docker\:tag: env
+docker\:tag:
+	@$(SELF) deps
 	@echo INFO: Tagging $(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG) as $(DOCKER_URI)
-	@$(DOCKER_CMD) tag -f "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)" "$(DOCKER_URI)"
+	@$(DOCKER_CMD) tag "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)" "$(DOCKER_URI)"
 
 ## Remove existing docker images
-docker\:clean: env
+docker\:clean:
+	@$(SELF) deps
 	@echo INFO: Clean $(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG), $(DOCKER_URI)
 	@$(DOCKER_CMD) rmi -f "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)"
 	@$(DOCKER_CMD) rmi -f "$(DOCKER_URI)"
 	$(eval DOCKER_BUILD_OPTS += --no-cache=true)
 
 ## Test drive the image
-docker\:run: env
+docker\:run:
+	@$(SELF) deps
 	@echo "INFO: Running $(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG) as $(DOCKER_CONTAINER_NAME)"
 	@$(DOCKER_CMD) run --name "$(DOCKER_CONTAINER_NAME)" --rm -p "$(DOCKER_BIND_PORT)" -t -i "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)"
 
 ## Run the container and start a shell
-docker\:shell: env
+docker\:shell:
+	@$(SELF) deps
 	@echo INFO: Starting shell in $(DOCKER_IMAGE) as $(DOCKER_CONTAINER_NAME) with $(DOCKER_BIND_PORT)
 	@$(DOCKER_CMD) run --name "$(DOCKER_CONTAINER_NAME)" --rm -p "$(DOCKER_BIND_PORT)" -t -i --volume "$(shell pwd):/opt" --entrypoint="$(DOCKER_SHELL)"  "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)" -c $(DOCKER_SHELL)
 
 ## Attach to the running container
-docker\:attach: env
+docker\:attach:
+	@$(SELF) deps
 	@echo INFO: Attaching to $(DOCKER_CONTAINER_NAME)
 	@$(DOCKER_CMD) exec -i -t  "$(DOCKER_CONTAINER_NAME)" $(DOCKER_SHELL)
 
 ## Login to docker registry
-docker\:login: env
+docker\:login:
+	@$(SELF) deps
 	@$(call assert_set,DOCKER_EMAIL)
 	@$(call assert_set,DOCKER_USER)
 	@$(call assert_set,DOCKER_PASS)
@@ -128,6 +141,7 @@ docker\:login: env
 
 ## Export docker images to file
 docker\:export:
+	@$(SELF) deps
 	@$(call assert_set,DOCKER_IMAGE)
 	@$(call assert_set,DOCKER_TAG)
 	@$(call assert_set,DOCKER_EXPORT)
@@ -136,6 +150,7 @@ docker\:export:
 
 ## Import docker images from file
 docker\:import:
+	@$(SELF) deps
 	@$(call assert_set,DOCKER_EXPORT)
 	@echo INFO: Importing $(DOCKER_EXPORT)
 	@docker load -i $(DOCKER_EXPORT)
