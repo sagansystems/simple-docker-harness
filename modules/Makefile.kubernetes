@@ -15,6 +15,9 @@ KUBECTL_SSH_CMD := ssh -A -o 'BatchMode=yes' -o 'LogLevel=error' -o 'StrictHostK
 # Optionally define an SSH command to use for tunneling kubectl commands
 KUBECTL_SSH_TUNNEL ?= $(KUBECTL_SSH_USER)@$(CLUSTER_BASTION)
 
+# Flag to control whether or not `kubernetes:status` is called on deployments
+KUBECTL_STATUS ?= true
+
 # Serial number optionally used for versioning; select the last 5 characters of unix time (24 character limit to resource names in k8s)
 SERIAL ?= $(shell echo -n $$(date +%s) | tail -c 5)
 export SERIAL
@@ -135,6 +138,7 @@ kubernetes\:delete-deployment:
 # (private) Update existing deployment or create, if necessary
 kubernetes\:apply-deployment:
 	$(call kubectl_apply,deployment)
+	@[ "$(KUBECTL_STATUS)" != "true" ] || time $(SELF) kubernetes:status
 
 ## Rollback to previous deployment
 kubernetes\:undo-deployment:
@@ -159,6 +163,10 @@ kubernetes\:delete-job:
 kubernetes\:run-job:
 	@$(SELF) kubernetes:delete-job >/dev/null 2>&1 || true
 	$(call kubectl_create,job)
+
+## Output the status of the deployment
+kubernetes\:status:
+	@$(KUBECTL_CMD) rollout status deployment $(KUBERNETES_APP)
 
 ## List deployed replication controllers for app
 kubernetes\:list-rc:
