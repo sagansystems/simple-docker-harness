@@ -6,6 +6,7 @@ export CLUSTER_NAMESPACE
 KUBERNETES_ANNOTATION ?= $(shell date -u +'%Y-%m-%d %H:%M:%SZ')
 KUBERNETES_APP ?= $(subst -docker,,$(shell basename "`pwd`"))
 KUBERNETES_RESOURCE_PATH ?= ./kubernetes
+KUBERNETES_RESOURCE_VALIDATION ?= configmap
 export KUBERNETES_APP
 
 # Kubectl specific settings
@@ -79,9 +80,9 @@ kubernetes\:info:
 
 # (private) Validate a configuration
 kubernetes\:validate:
-	@for env in $$(grep -Eo '\$$[A-Z_0-9]+' $(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-configmap.yml | cut -d\$$ -f2); do \
+	@for env in $$(grep -Eo '\$$[A-Z_0-9]+' $(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(KUBERNETES_RESOURCE_VALIDATION).yml | cut -d\$$ -f2); do \
     if [ -z "$${!env}" ]; then \
-      echo "$$env not defined in $(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-configmap.yml"; \
+      echo "$$env not defined in $(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(KUBERNETES_RESOURCE_VALIDATION).yml"; \
       exit 1; \
     fi; \
   done
@@ -155,12 +156,17 @@ kubernetes\:deploy:
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-horizontalpodautoscaler.yml" ] || $(SELF) kubernetes:apply-horizontalpodautoscaler || $(NOTIFY_FAILURE)
 	$(NOTIFY_SUCCESS)
 
+# (private) Validate a job
+kubernetes\:validate-job:
+	@$(SELF) kubernetes:validate KUBERNETES_RESOURCE_VALIDATION=job
+
 # (private) Delete a job
 kubernetes\:delete-job:
 	$(call kubectl_delete,job)
 
 ## Run a job
 kubernetes\:run-job:
+	@$(SELF) kubernetes:validate-job
 	@$(SELF) kubernetes:delete-job >/dev/null 2>&1 || true
 	$(call kubectl_create,job)
 
