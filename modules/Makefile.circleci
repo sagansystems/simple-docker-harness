@@ -82,6 +82,6 @@ circle\:run-job-kubernetes:
 	  $(SELF) kubernetes:run-job kubernetes:job-logs KUBERNETES_APP=$(JOB_KUBERNETES_APP); \
 	else \
 	  echo "INFO: Running $(JOB_KUBERNETES_APP):$(IMAGE_TAG)"; \
-	  $(MAKEFILE_DIR)/bin/circle-do-exclusively,sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:run-job kubernetes:job-logs KUBERNETES_APP=$(JOB_KUBERNETES_APP); \
+	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:run-job kubernetes:job-logs KUBERNETES_APP=$(JOB_KUBERNETES_APP); \
 	fi
 
