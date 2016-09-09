@@ -10,7 +10,7 @@ endif
 COMMIT ?= $(CIRCLE_SHA1)
 COMMIT_LOG ?= $(shell git log --format=oneline --pretty=format:'%s' -n 1 $(CIRCLE_SHA1))
 RELEASE ?= release-$(shell date -u +'%Y%m%d%H%M%SZ')
-DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT) 
+DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT)
 
 export COMMIT
 export COMMIT_LOG
@@ -31,6 +31,7 @@ circle\:deps:
      sudo chown ubuntu:ubuntu /usr/local/bin/jq; \
      sudo chmod 755 /usr/local/bin/jq; \
   fi
+	cat $(MAKEFILE_DIR)/retry.sh >> ~/.bashrc
 
 ## Tag using BUILD version and push to registry (CircleCI)
 circle\:tag:
@@ -60,7 +61,7 @@ circle\:release:
 circle\:deploy-kubernetes:
 	$(call assert,IMAGE_TAG)
 	$(call assert,CIRCLE_BRANCH)
-	@[ ! -f "$(DOCKER_FILE)" ] || $(SELF) circle:tag 
+	@[ ! -f "$(DOCKER_FILE)" ] || $(SELF) circle:tag
 	@$(SELF) kubernetes:info
 	@if [ -z "$(CIRCLE_TOKEN)" ]; then \
 	  echo -e "$(call red,WARN:) Deploying $(IMAGE_TAG) without obtaining lock; CIRCLE_TOKEN not defined"; \
