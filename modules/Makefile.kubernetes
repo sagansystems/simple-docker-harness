@@ -175,12 +175,12 @@ kubernetes\:job-logs:
 	@echo -e "INFO: Waiting for job $(KUBERNETES_APP) to start on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
 	@while [[ $$JOB_STATUS != "Running" && $$JOB_STATUS != "Completed" && $$JOB_STATUS != "Failed" ]]; do \
 	sleep 1;\
-	JOB_STATUS=`$(KUBECTL_CMD) get pods -a --no-headers -l job-name=$(KUBERNETES_APP)-job | tr -s ' ' | cut -d ' ' -f3`;\
+	JOB_STATUS=`$(KUBECTL_CMD) get pods -a --no-headers -l job-name=$(KUBERNETES_APP) | tr -s ' ' | cut -d ' ' -f3`;\
 	echo "Job Status = $$JOB_STATUS";\
 	done
 	@echo -e "INFO: Job logs for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE)):\n"
-	@$(KUBECTL_CMD) logs -f $(shell $(KUBECTL_CMD) get pods -a -l job-name=$(KUBERNETES_APP)-job -o name)
-	@exit `$(KUBECTL_CMD) get pods -a -l job-name=$(KUBERNETES_APP)-job -o jsonpath={.items..status.containerStatuses[0]..exitCode}`
+	@$(KUBECTL_CMD) logs -f $(shell $(KUBECTL_CMD) get pods -a -l job-name=$(KUBERNETES_APP) -o name)
+	@exit `$(KUBECTL_CMD) get pods -a -l job-name=$(KUBERNETES_APP) -o jsonpath={.items..status.containerStatuses[0]..exitCode}`
 
 ## Output the status of the deployment
 kubernetes\:status:
