@@ -12,7 +12,7 @@ export KUBERNETES_APP
 # Kubectl specific settings
 KUBECTL ?= /opt/bin/kubectl
 KUBECTL_SCHEMA_CACHE_DIR ?= --schema-cache-dir=.kube/cache
-KUBECTL_SSH_CMD := ssh -A -o 'BatchMode=yes' -o 'LogLevel=error' -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null'
+KUBECTL_SSH_CMD := ssh -A -o 'LogLevel=error' -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null'
 # Optionally define an SSH command to use for tunneling kubectl commands
 KUBECTL_SSH_TUNNEL ?= $(KUBECTL_SSH_USER)@$(CLUSTER_BASTION)
 
