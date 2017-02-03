@@ -8,8 +8,8 @@ LOCAL_ARCH ?= $(shell uname -m)
 DOCKER_REGISTRY := index.docker.io
 DOCKER_NAMESPACE ?= sagan
 
-DOCKER_CLIENT_VERSION = `$(DOCKER_CMD) version --format={{.Client.Version}} 2>/dev/null`
-DOCKER_SERVER_VERSION = `$(DOCKER_CMD) version --format={{.Server.Version}} 2>/dev/null`
+DOCKER_CLIENT_VERSION = $(shell $(DOCKER_CMD) version --format={{.Client.Version}} 2>/dev/null)
+DOCKER_SERVER_VERSION = $(shell $(DOCKER_CMD) version --format={{.Server.Version}} 2>/dev/null)
 
 # These vars are are used by the `login` target.
 DOCKER_EMAIL ?=
@@ -101,7 +101,7 @@ docker\:test:
 docker\:tag:
 	@$(SELF) deps
 	@echo INFO: Tagging $(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG) as $(DOCKER_URI)
-ifeq ($(DOCKER_SERVER_VERSION),1.9.1)
+ifeq ($(findstring 1.9.1,$(DOCKER_SERVER_VERSION)),1.9.1)
 	@$(DOCKER_CMD) tag -f "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)" "$(DOCKER_URI)"
 else
 	@$(DOCKER_CMD) tag "$(DOCKER_REPOSITORY):$(DOCKER_BUILD_TAG)" "$(DOCKER_URI)"
