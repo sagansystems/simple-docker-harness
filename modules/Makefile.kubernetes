@@ -10,9 +10,10 @@ KUBERNETES_RESOURCE_VALIDATION ?= configmap
 export KUBERNETES_APP
 
 # Kubectl specific settings
+SSH_SOCK ?= ~/tmp/kubectl-$(CLUSTER_BASTION)
 KUBECTL ?= /opt/bin/kubectl
 KUBECTL_SCHEMA_CACHE_DIR ?= --schema-cache-dir=.kube/cache
-KUBECTL_SSH_CMD := ssh -A -o 'LogLevel=error' -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null'
+KUBECTL_SSH_CMD := ssh -S $(SSH_SOCK)
 # Optionally define an SSH command to use for tunneling kubectl commands
 KUBECTL_SSH_TUNNEL ?= $(KUBECTL_SSH_USER)@$(CLUSTER_BASTION)
 
@@ -71,6 +72,15 @@ KUBECTL_CMD ?= $(KUBECTL_SSH_CMD) "$(KUBECTL)" --logtostderr=true --insecure-ski
 # Reference Docs:
 #  - https://cloud.google.com/container-engine/docs/kubectl/
 #
+## Bring up SSH tunnel for kubernetes commands, must be called before executing any targets
+kubernetes\:tunnel-up:
+	@echo "Please authenticate using your MFA device..."
+	@ssh -A -M -S $(SSH_SOCK) -f -N -o 'LogLevel=error' -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' $(KUBECTL_SSH_TUNNEL)
+
+## Tear down kubernetes SSH tunnel, must be called after executing other targets
+kubernetes\:tunnel-down:
+	@[ -e $(SSH_SOCK) ] && ssh -S $(SSH_SOCK) -O exit $(KUBECTL_SSH_TUNNEL)
+
 ## Display info about the kubernetes setup
 kubernetes\:info:
 	@echo -e "Cluster Namespace: $(call yellow,$(CLUSTER_NAMESPACE))"
