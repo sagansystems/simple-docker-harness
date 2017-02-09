@@ -196,8 +196,12 @@ kubernetes\:job-logs:
 	@$(KUBECTL_CMD) logs -f $(shell $(KUBECTL_CMD) get pods -a -l job-name=$(KUBERNETES_APP) -o name)
 	@num='^[0-9]+$$'; \
 	while ! [[ $$EXIT_CODE =~ $$num ]]; do \
-	sleep 1;\
-	EXIT_CODE=`$(KUBECTL_CMD) get pods -a -l job-name=$(KUBERNETES_APP) -o jsonpath={.items..status.containerStatuses[0]..exitCode}`;\
+		sleep 1;\
+		EXIT_CODE=`$(KUBECTL_CMD) get pods -a -l job-name=$(KUBERNETES_APP) -o jsonpath={.items..status.containerStatuses[0]..exitCode} 2>&1`;\
+		if [[ $$EXIT_CODE = "No resources found." ]]; then \
+			echo "failed to find job exit code"; \
+			exit 1; \
+		fi; \
 	done; \
 	exit $$EXIT_CODE
 
