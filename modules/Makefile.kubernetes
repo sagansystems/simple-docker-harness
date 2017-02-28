@@ -55,7 +55,7 @@ endif
 
 ifeq ($(strip $(KUBECTL_SSH_USER)),)
   # Guess their github username
-	KUBECTL_SSH_USER = $(shell ssh git@github.com 2>&1 | grep 'successfully authenticated' | cut -d' ' -f2 | cut -d'!' -f1)
+	KUBECTL_SSH_USER = $(shell ssh git@github.com 2>&1 | grep 'successfully authenticated' | cut -d' ' -f2 | cut -d'!' -f1 | tr A-Z a-z)
 endif
 
 # More kubectl specific settings
