@@ -7,9 +7,11 @@ else
 BUILD ?= $(CIRCLE_BRANCH)-$(CIRCLE_BUILD_NUM)
 endif
 
+# Calculate timestamp exactly once at first evaluation
+TIMESTAMP := $(shell date -u +'%Y%m%d%H%M%SZ')
 COMMIT ?= $(CIRCLE_SHA1)
 COMMIT_LOG ?= $(shell git log --format=oneline --pretty=format:'%s' -n 1 $(CIRCLE_SHA1))
-RELEASE ?= release-$(shell date -u +'%Y%m%d%H%M%SZ')
+RELEASE ?= release-$(TIMESTAMP)
 DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT)
 
 export COMMIT
