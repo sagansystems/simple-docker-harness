@@ -10,12 +10,10 @@ endif
 # Calculate timestamp exactly once at first evaluation
 TIMESTAMP := $(shell date -u +'%Y%m%d%H%M%SZ')
 COMMIT ?= $(CIRCLE_SHA1)
-COMMIT_LOG ?= $(shell git log --format=oneline --pretty=format:'%s' -n 1 $(CIRCLE_SHA1))
 RELEASE ?= release-$(TIMESTAMP)
 DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT)
 
 export COMMIT
-export COMMIT_LOG
 export RELEASE
 
 .PHONY : circle\:tag circle\:release circle\:deps
@@ -67,7 +65,7 @@ circle\:deploy-kubernetes:
 	@$(SELF) kubernetes:info
 	@if [ -z "$(CIRCLE_TOKEN)" ]; then \
 	  echo -e "$(call red,WARN:) Deploying $(IMAGE_TAG) without obtaining lock; CIRCLE_TOKEN not defined"; \
-	  $(SELF) kubernetes:configure kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - $(COMMIT_LOG) ($(COMMIT))"; \
+	  $(SELF) kubernetes:configure kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - commit $(COMMIT)"; \
   else \
 	  echo "INFO: Deploying $(IMAGE_TAG)"; \
 	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:configure kubernetes:deploy; \
