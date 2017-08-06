@@ -12,7 +12,6 @@ DOCKER_CLIENT_VERSION = $(shell $(DOCKER_CMD) version --format={{.Client.Version
 DOCKER_SERVER_VERSION = $(shell $(DOCKER_CMD) version --format={{.Server.Version}} 2>/dev/null)
 
 # These vars are are used by the `login` target.
-DOCKER_EMAIL ?=
 DOCKER_USER ?=
 DOCKER_PASS ?=
 
@@ -136,11 +135,10 @@ docker\:attach:
 ## Login to docker registry
 docker\:login:
 	@$(SELF) deps
-	@$(call assert_set,DOCKER_EMAIL)
 	@$(call assert_set,DOCKER_USER)
 	@$(call assert_set,DOCKER_PASS)
 	@echo "INFO: Logging in as $(DOCKER_USER)"
-	@$(DOCKER_CMD) login -e $(DOCKER_EMAIL) -u $(DOCKER_USER) -p $(DOCKER_PASS)
+	@$(DOCKER_CMD) login -u $(DOCKER_USER) -p $(DOCKER_PASS)
 
 ## Export docker images to file
 docker\:export:

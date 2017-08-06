@@ -1,6 +1,3 @@
-DOCKER_DOWNLOAD_URL = https://s3-external-1.amazonaws.com/circle-downloads/docker-$(DOCKER_VERSION)-circleci
-DOCKER_CMD = /usr/bin/docker
-
 ifdef CIRCLE_TAG
 BUILD ?= $(CIRCLE_TAG)
 else
@@ -20,17 +17,6 @@ export RELEASE
 
 ## Install CircleCI deps
 circle\:deps:
-	@echo "INFO: Installing Docker $(DOCKER_VERSION)"
-	@sudo curl -s -o $(DOCKER_CMD) $(DOCKER_DOWNLOAD_URL)
-	@sudo chmod 755 $(DOCKER_CMD)
-# because as of 2016-04-25, the Ubuntu 14 (experimental) version
-# of CircleCI doesn't have it and it's needed for circle-do-exclusively.sh
-	@which jq >/dev/null; \
-   if [ $$? -ne 0 ]; then \
-     sudo curl -s -q -L https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 -o /usr/local/bin/jq ; \
-     sudo chown ubuntu:ubuntu /usr/local/bin/jq; \
-     sudo chmod 755 /usr/local/bin/jq; \
-  fi
 	cat $(MAKEFILE_DIR)/retry.sh >> ~/.bashrc
 
 ## Tag using BUILD version and push to registry (CircleCI)
