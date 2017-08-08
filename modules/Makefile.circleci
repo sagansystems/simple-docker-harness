@@ -22,14 +22,12 @@ circle\:deps:
 ## Tag using BUILD version and push to registry (CircleCI)
 circle\:tag:
 	@$(call assert_set,BUILD)
-	@$(SELF) docker:login
 	@echo "INFO: Tagging $(COMMIT) as $(BUILD)"
 	@$(SELF) DOCKER_TAG=$(BUILD) docker:tag docker:push
 	@$(SELF) DOCKER_TAG=$(COMMIT) docker:tag docker:push
 
 ## Tag as latest and push to registry (CircleCI)
 circle\:tag-latest:
-	@$(SELF) docker:login
 	@echo "INFO: Tagging latest"
 	@$(SELF) DOCKER_TAG=latest docker:push
 	@git fetch --tags
@@ -39,7 +37,6 @@ circle\:tag-latest:
 ## Tag and push official release to registry (CircleCI)
 circle\:release:
 	@$(call assert_set,RELEASE)
-	@$(SELF) docker:login
 	@echo "INFO: Releasing $(RELEASE)"
 	@$(SELF) DOCKER_TAG=$(RELEASE) docker:tag docker:push
 
