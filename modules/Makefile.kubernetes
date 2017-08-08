@@ -68,9 +68,6 @@ KUBECTL_SSH_CMD := ssh $(KUBECTL_SSH_OPTS)
 KUBECTL_SSH_CMD += $(KUBECTL_SSH_TUNNEL)
 
 KUBECTL_CMD ?= $(KUBECTL_SSH_CMD) "$(KUBECTL)" --logtostderr=true --insecure-skip-tls-verify=true
-ifeq ($(CIRCLECI),true)
-  KUBECTL_SSH_CMD += -i '$(HOME)/.ssh/id_circleci_github'
-endif
 
 #
 # Reference Docs:
@@ -198,6 +195,7 @@ kubernetes\:job-logs:
 	while ! [[ $$EXIT_CODE =~ $$num ]]; do \
 		sleep 1;\
 		EXIT_CODE=`$(KUBECTL_CMD) get pods -a -l job-name=$(KUBERNETES_APP) -o jsonpath={.items..status.containerStatuses[0]..exitCode} 2>&1`;\
+		echo "Found exit code [$$EXIT_CODE] for job $(KUBERNETES_APP)";\
 		if [[ $$EXIT_CODE = "No resources found." ]]; then \
 			echo "failed to find job exit code"; \
 			exit 1; \
