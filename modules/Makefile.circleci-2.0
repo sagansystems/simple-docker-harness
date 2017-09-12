@@ -15,9 +15,6 @@ DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT)
 export COMMIT
 export RELEASE
 
-circle\:version:
-	@echo "Circle 2.0"
-
 .PHONY : circle\:tag circle\:release circle\:deps
 
 ## Install CircleCI deps
