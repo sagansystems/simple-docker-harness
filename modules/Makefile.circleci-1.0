@@ -1,4 +1,4 @@
-export CIRCLE_1.0 = true
+export CIRCLE_VERSION = "1.0"
 
 DOCKER_DOWNLOAD_URL = https://s3-external-1.amazonaws.com/circle-downloads/docker-$(DOCKER_VERSION)-circleci
 DOCKER_CMD = /usr/bin/docker
@@ -22,6 +22,7 @@ export RELEASE
 
 ## Install CircleCI deps
 circle\:deps:
+	@echo "Configuring for Circle ${CIRCLE_VERSION}"
 	@echo "INFO: Installing Docker $(DOCKER_VERSION)"
 	@sudo curl -s -o $(DOCKER_CMD) $(DOCKER_DOWNLOAD_URL)
 	@sudo chmod 755 $(DOCKER_CMD)

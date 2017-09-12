@@ -1,4 +1,4 @@
-export CIRCLE_2.0 = true
+export CIRCLE_VERSION = "2.0"
 
 ifdef CIRCLE_TAG
 BUILD ?= $(CIRCLE_TAG)
@@ -19,7 +19,8 @@ export RELEASE
 
 ## Install CircleCI deps
 circle\:deps:
-	cat $(MAKEFILE_DIR)/retry.sh >> ~/.bashrc
+	@echo "Configuring for Circle ${CIRCLE_VERSION}"
+	@cat $(MAKEFILE_DIR)/retry.sh >> ~/.bashrc
 
 ## Tag using BUILD version and push to registry (CircleCI)
 circle\:tag:

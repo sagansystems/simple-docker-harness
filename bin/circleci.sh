@@ -1,5 +1,8 @@
 #!/bin/bash
-export DOCKER_VERSION=${1:-1.9.1} # only used by Circle 1.0
+if [ -z "$CIRCLE_JOB" ]; then
+  export DOCKER_VERSION=${1:-1.9.1} # only used by Circle 1.0
+fi
+
 export BUILD_HARNESS_PROJECT=${2:-build-harness}
 export BUILD_HARNESS_BRANCH=${3:-master}
 export GITHUB_REPO="git@github.com:sagansystems/${BUILD_HARNESS_PROJECT}.git"
