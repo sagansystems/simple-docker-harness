@@ -136,11 +136,16 @@ docker\:attach:
 ## Login to docker registry
 docker\:login:
 	@$(SELF) deps
-	@$(call assert_set,DOCKER_EMAIL)
 	@$(call assert_set,DOCKER_USER)
 	@$(call assert_set,DOCKER_PASS)
 	@echo "INFO: Logging in as $(DOCKER_USER)"
-	@$(DOCKER_CMD) login -e $(DOCKER_EMAIL) -u $(DOCKER_USER) -p $(DOCKER_PASS)
+	@docker login --help|grep email
+	if [ $$? -ne 0 ]; then \
+		$(DOCKER_CMD) login -u $(DOCKER_USER) -p $(DOCKER_PASS); \
+	else \
+		$(call assert_set,DOCKER_EMAIL); \
+		$(DOCKER_CMD) login -e $(DOCKER_EMAIL) -u $(DOCKER_USER) -p $(DOCKER_PASS); \
+	fi
 
 ## Export docker images to file
 docker\:export:

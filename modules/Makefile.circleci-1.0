@@ -1,3 +1,5 @@
+export CIRCLE_1.0 = true
+
 DOCKER_DOWNLOAD_URL = https://s3-external-1.amazonaws.com/circle-downloads/docker-$(DOCKER_VERSION)-circleci
 DOCKER_CMD = /usr/bin/docker
 

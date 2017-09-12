@@ -1,0 +1,72 @@
+export CIRCLE_2.0 = true
+
+ifdef CIRCLE_TAG
+BUILD ?= $(CIRCLE_TAG)
+else
+BUILD ?= $(CIRCLE_BRANCH)-$(CIRCLE_BUILD_NUM)
+endif
+
+# Calculate timestamp exactly once at first evaluation
+TIMESTAMP := $(shell date -u +'%Y%m%d%H%M%SZ')
+COMMIT ?= $(CIRCLE_SHA1)
+RELEASE ?= release-$(TIMESTAMP)
+DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT)
+
+export COMMIT
+export RELEASE
+
+.PHONY : circle\:tag circle\:release circle\:deps
+
+## Install CircleCI deps
+circle\:deps:
+	cat $(MAKEFILE_DIR)/retry.sh >> ~/.bashrc
+
+## Tag using BUILD version and push to registry (CircleCI)
+circle\:tag:
+	@$(call assert_set,BUILD)
+	@echo "INFO: Tagging $(COMMIT) as $(BUILD)"
+	@$(SELF) DOCKER_TAG=$(BUILD) docker:tag docker:push
+	@$(SELF) DOCKER_TAG=$(COMMIT) docker:tag docker:push
+
+## Tag as latest and push to registry (CircleCI)
+circle\:tag-latest:
+	@echo "INFO: Tagging latest"
+	@$(SELF) DOCKER_TAG=latest docker:push
+	@git fetch --tags
+	@git tag --force "$(CIRCLE_BRANCH)-docker-latest"
+	@git push origin --force "tags/$(CIRCLE_BRANCH)-docker-latest"
+
+## Tag and push official release to registry (CircleCI)
+circle\:release:
+	@$(call assert_set,RELEASE)
+	@echo "INFO: Releasing $(RELEASE)"
+	@$(SELF) DOCKER_TAG=$(RELEASE) docker:tag docker:push
+
+## Deploy to kubernetes after obtaining an exclusive lock
+circle\:deploy-kubernetes:
+	$(call assert,IMAGE_TAG)
+	$(call assert,CIRCLE_BRANCH)
+	@[ ! -f "$(DOCKER_FILE)" ] || $(SELF) circle:tag
+	@$(SELF) kubernetes:info
+	@if [ -z "$(CIRCLE_TOKEN)" ]; then \
+	  echo -e "$(call red,WARN:) Deploying $(IMAGE_TAG) without obtaining lock; CIRCLE_TOKEN not defined"; \
+	  $(SELF) kubernetes:configure kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - commit $(COMMIT)"; \
+  else \
+	  echo "INFO: Deploying $(IMAGE_TAG)"; \
+	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:configure kubernetes:deploy; \
+  fi
+	@sleep 3
+	@$(SELF) kubernetes:list-deployments kubernetes:list-rs kubernetes:list-pods
+
+## Run job on kubernetes after obtaining an exclusive lock
+circle\:run-job-kubernetes:
+	$(call assert,IMAGE_TAG)
+	$(call assert,JOB_KUBERNETES_APP)
+	$(call assert,CIRCLE_BRANCH)
+	@if [ -z "$(CIRCLE_TOKEN)" ]; then \
+	  echo -e "$(call red,WARN:) Running $(JOB_KUBERNETES_APP):$(IMAGE_TAG) without obtaining lock; CIRCLE_TOKEN not defined"; \
+	  $(SELF) kubernetes:run-job kubernetes:job-logs KUBERNETES_APP=$(JOB_KUBERNETES_APP); \
+	else \
+	  echo "INFO: Running $(JOB_KUBERNETES_APP):$(IMAGE_TAG)"; \
+	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:run-job kubernetes:job-logs KUBERNETES_APP=$(JOB_KUBERNETES_APP); \
+	fi
