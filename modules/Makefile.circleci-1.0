@@ -20,6 +20,9 @@ export RELEASE
 
 .PHONY : circle\:tag circle\:release circle\:deps
 
+circle\:version:
+	@echo "Circle 1.0"
+
 ## Install CircleCI deps
 circle\:deps:
 	@echo "INFO: Installing Docker $(DOCKER_VERSION)"
