@@ -4,7 +4,7 @@ if [ -z "$CIRCLE_JOB" ]; then
 fi
 
 export BUILD_HARNESS_PROJECT=${2:-build-harness}
-export BUILD_HARNESS_BRANCH=${3:-circle-2.0-wip}
+export BUILD_HARNESS_BRANCH=${3:-master}
 export GITHUB_REPO="git@github.com:sagansystems/${BUILD_HARNESS_PROJECT}.git"
 
 # If Circle 1.0 build, install to home directory
