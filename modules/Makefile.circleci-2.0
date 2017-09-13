@@ -60,7 +60,7 @@ circle\:deploy-kubernetes:
 	@$(SELF) kubernetes:list-deployments kubernetes:list-rs kubernetes:list-pods
 
 ## Cleanup docker images on CircleCI
-circle\:cleanup:
+circle\:cleanup-docker:
 	@echo "INFO: Cleaning up older dangling docker images"
 	@docker images -f "dangling=true" --format "{{.ID}} {{.CreatedSince}}" | grep "weeks ago" | cut -f 1 -d " " | xargs --no-run-if-empty docker rmi || true
 
