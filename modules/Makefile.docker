@@ -139,8 +139,7 @@ docker\:login:
 	@$(call assert_set,DOCKER_USER)
 	@$(call assert_set,DOCKER_PASS)
 	$(eval docker_version = $(shell docker version|grep Version | tail -n 1 | tr -s ' ' | cut -d ' ' -f3 | cut -d '.' -f 1 | cut -d . -f1))
-	@echo "Docker Version: ${docker_version}"
-	if [ ${docker_version} -gt 12 ]; then \
+	@if [ ${docker_version} -gt 12 ]; then \
 		echo "INFO: Logging in as $(DOCKER_USER)"; \
 		$(DOCKER_CMD) login -u $(DOCKER_USER) -p $(DOCKER_PASS); \
 	else \
