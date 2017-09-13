@@ -23,9 +23,12 @@ define assert_set
   @[ -n "$($1)" ] || (echo "$(1) not set in $(@)"; exit 1)
 endef
 
-# Setup the docker run-time environment
 ifeq ($(CIRCLECI),true)
-  include $(MAKEFILE_DIR)/modules/Makefile.circleci
+  ifdef CIRCLE_JOB # Circle 2.0
+      include $(MAKEFILE_DIR)/modules/Makefile.circleci-2.0
+  else
+      include $(MAKEFILE_DIR)/modules/Makefile.circleci-1.0
+  endif
 endif
 
 # Include the docker-specific targets
