@@ -68,7 +68,7 @@ KUBECTL_SSH_CMD := ssh $(KUBECTL_SSH_OPTS)
 KUBECTL_SSH_CMD += $(KUBECTL_SSH_TUNNEL)
 
 KUBECTL_CMD ?= $(KUBECTL_SSH_CMD) "$(KUBECTL)" --logtostderr=true --insecure-skip-tls-verify=true
-ifeq ($(CIRCLE_VERSION),1.0)
+ifeq ($(CIRCLE_VERSION),"1.0")
   KUBECTL_SSH_CMD += -i '$(HOME)/.ssh/id_circleci_github'
 endif
 
