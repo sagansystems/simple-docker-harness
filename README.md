@@ -39,6 +39,7 @@ Run `make help` to get a list of available build targets
   circle:deps               Install CircleCI deps
   circle:tag                Tag and push to registry (CircleCI)
   circle:release            Tag and push official release to registry (CircleCI)
+  circle:cleanup-docker     Cleanup Docker images from CircleCI Docker cache. Calling it once in workflow (for example in the "build" job) should be enough.
 ```
 
 ## Setting up your development environment
@@ -80,44 +81,75 @@ You can chain targets together as well or even override environment settings, li
 
 ## CircleCI Integration
 
-Here's a minimal example of what is needed for CircleCI. Add/merge the following to your projects `circle.yml` file.
+CircleCI will use the `circle` tag of build-harness. Once your build-harness change is merged into master, please advance the `circle` tag. You can also temporarily tag your branch with this tag to test your changes.
+
+Here's a minimal example of what is needed for CircleCI. Add/merge the following to your projects `.circleci/config.yml` file.
 ```yaml
-machine:
-  pre:
-    - "curl --retry 5 --retry-delay 1 https://raw.githubusercontent.com/sagansystems/build-harness/master/bin/circleci.sh | bash -x -s 1.9.1"
-  services:
-    - "docker"
+version: 2
 
-dependencies:
-  post:
-    - make docker:build
+references:
+  container_config: &container_config
+    docker:
+      - image: circleci/node:7.10.1 # Choose base docker image for your build, https://hub.docker.com/u/circleci/ has some
+    working_directory: ~/chat-sdk # This should match your project's name
 
-test:
-  override:
-    - make test
+  download_build_harness: &download_build_harness
+    run: 
+        name: Download build-harness
+        command: curl --retry 5 --retry-delay 1 https://raw.githubusercontent.com/sagansystems/build-harness/master/bin/circleci.sh | bash -x -s
 
-deployment:
-  master:
-    branch: "master"
-    commands:
-      - make circle:tag          # Tag and publish using branch and build number
-      - make circle:tag-latest   # Tag as latest, only on master
-      - make kubernetes:deploy:  # Deloy to master.gladly.com
-        environment:
-          CLUSTER_NAMESPACE: master 
-          CLUSTER_DOMAIN: gladly.com
+jobs:
+  build:
+    <<: *container_config
+    steps:
+      - setup_remote_docker:
+          reusable: true
+      - checkout
+      - *download_build_harness
+      - run: make docker:login circle:cleanup-docker
+      - run:
+          name: Build
+          command: make docker:build
 
-  daren:
-    branch: "daren"
-    commands:
-      - make circle:tag          # Tag and publish using branch and build number
-      - make circle:tag-latest   # Tag as latest, only on master
-      - make kubernetes:deploy:
-        environment:
-          CLUSTER_NAMESPACE: daren 
+  deploy:
+    <<: *container_config
+    steps:
+      - setup_remote_docker:
+          reusable: true
+      - checkout
+      - *download_build_harness
+      - run: make docker:login
+      - run: 
+          name: Tag images
+          command: make circle:tag          # Tag and publish using branch and build number
+      - run:
+          name: Tag images as latest
+          command: |
+            if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
+              make circle:tag-latest   # Tag as latest, only on master
+            fi
+      - deploy:
+          name: Deploy to master cluster
+          command: |
+            if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
+              make kubernetes:deploy:  # Deloy to master.gladly.com
+            fi
+          environment:
+            CLUSTER_NAMESPACE: master 
+            CLUSTER_DOMAIN: gladly.com
 
-  else:
-    branch: "/.*/"               # All other branches, tag and publish using branch and build number
-    commands:
-      - make circle:tag
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: 
+                - master
+                - /release.*/
+                - /.*migration.*/
 ```
