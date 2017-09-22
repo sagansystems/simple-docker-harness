@@ -62,7 +62,7 @@ circle\:deploy-kubernetes:
 ## Cleanup docker images on CircleCI
 circle\:cleanup-docker:
 	@echo "INFO: Cleaning up older dangling docker images"
-	@docker images -f "dangling=true" --format "{{.ID}} {{.CreatedSince}}" | grep "weeks ago" | cut -f 1 -d " " | xargs --no-run-if-empty docker rmi || true
+	@docker images -f "dangling=true" --format "{{.ID}} {{.CreatedSince}}" | grep "days\|weeks" | cut -f 1 -d " " | xargs --no-run-if-empty docker rmi || true
 
 ## Run job on kubernetes after obtaining an exclusive lock
 circle\:run-job-kubernetes:
