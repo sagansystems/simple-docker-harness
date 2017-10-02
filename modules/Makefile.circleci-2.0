@@ -61,8 +61,8 @@ circle\:deploy-kubernetes:
 
 ## Cleanup docker images on CircleCI
 circle\:cleanup-docker:
-	@echo "INFO: Cleaning up older dangling docker images"
-	@docker images -f "dangling=true" --format "{{.ID}} {{.CreatedSince}}" | grep "days\|weeks" | cut -f 1 -d " " | xargs --no-run-if-empty docker rmi || true
+	@echo "INFO: Running Docker garbage collection"
+	@docker run -e FORCE_IMAGE_REMOVAL=1 -e GRACE_PERIOD_SECONDS=86400 -e MINIMUM_IMAGES_TO_SAVE=1 --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc || true
 
 ## Run job on kubernetes after obtaining an exclusive lock
 circle\:run-job-kubernetes:
