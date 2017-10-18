@@ -63,6 +63,8 @@ circle\:deploy-kubernetes:
 circle\:cleanup-docker:
 	@echo "INFO: Running Docker garbage collection"
 	@docker run -e FORCE_IMAGE_REMOVAL=1 -e GRACE_PERIOD_SECONDS=86400 -e MINIMUM_IMAGES_TO_SAVE=1 --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc || true
+	@echo "INFO: Docker disk usage after cleanup"
+	@docker system df -v 
 
 ## Run job on kubernetes after obtaining an exclusive lock
 circle\:run-job-kubernetes:
