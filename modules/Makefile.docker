@@ -138,14 +138,8 @@ docker\:login:
 	@$(SELF) deps
 	@$(call assert_set,DOCKER_USER)
 	@$(call assert_set,DOCKER_PASS)
-	$(eval docker_version = $(shell docker version|grep Version | tail -n 1 | tr -s ' ' | cut -d ' ' -f3 | cut -d '.' -f 1 | cut -d . -f1))
-	@if [ ${docker_version} -gt 12 ]; then \
-		echo "INFO: Logging in as $(DOCKER_USER)"; \
-		$(DOCKER_CMD) login -u $(DOCKER_USER) -p $(DOCKER_PASS); \
-	else \
-		echo "INFO: Logging in as $(DOCKER_USER)/${DOCKER_EMAIL}"; \
-		$(DOCKER_CMD) login -e $(DOCKER_EMAIL) -u $(DOCKER_USER) -p $(DOCKER_PASS); \
-	fi
+	@echo "INFO: Logging in as $(DOCKER_USER)"
+	@$(DOCKER_CMD) login -e $(DOCKER_EMAIL) -u $(DOCKER_USER) -p $(DOCKER_PASS) || $(DOCKER_CMD) login -u $(DOCKER_USER) -p $(DOCKER_PASS)
 
 ## Export docker images to file
 docker\:export:
