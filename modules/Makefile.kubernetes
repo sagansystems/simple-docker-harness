@@ -32,7 +32,7 @@ define kubectl_apply
 	$(call assert,CLUSTER_NAMESPACE)
 	$(call assert,CLUSTER_DOMAIN)
 	@echo -e "INFO: Applying changes to $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
-	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) $(2) -f -
 endef
 
 define kubectl_create
@@ -137,7 +137,7 @@ kubernetes\:delete-service:
 
 # (private) Update service or create, if necessary
 kubernetes\:apply-service:
-	$(call kubectl_apply,service)
+	$(call kubectl_apply,service,--force)
 
 # (private) Delete a controller
 kubernetes\:delete-controller:
