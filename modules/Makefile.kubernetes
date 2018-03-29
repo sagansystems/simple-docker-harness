@@ -102,6 +102,17 @@ kubernetes\:validate:
     fi; \
   done
 
+## Apply an arbitrary resource to the cluster
+kubernetes\:apply-resource:
+	@if [ ! -f "$(KUBERNETES_FQ_RESOURCE)" ]; then \
+		echo 'File $(KUBERNETES_FQ_RESOURCE) does not exist'; exit 1; \
+	fi;
+	$(call assert,CLUSTER_NAMESPACE)
+	$(call assert,CLUSTER_DOMAIN)
+	@echo -e "INFO: Applying changes to $(KUBERNETES_FQ_RESOURCE) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@$(call envsubst,$(KUBERNETES_FQ_RESOURCE)) | $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+
+
 # (private) Delete a horizontalpodautoscaler
 kubernetes\:delete-horizontalpodautoscaler:
 	$(call kubectl_delete,horizontalpodautoscaler)
@@ -147,7 +158,7 @@ kubernetes\:delete-controller:
 kubernetes\:apply-controller:
 	$(call kubectl_apply,controller)
 
-# (private) Delete a deploymentt
+# (private) Delete a deployment
 kubernetes\:delete-deployment:
 	$(call kubectl_delete,deployment)
 
