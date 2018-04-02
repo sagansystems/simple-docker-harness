@@ -196,10 +196,14 @@ kubernetes\:run-job:
 	@$(SELF) kubernetes:delete-job >/dev/null 2>&1 || true
 	$(call kubectl_create,job)
 
-## Show job logs and return job exit code
+## Show job logs and return job exit code, requires SSH if ran outside Codefresh
 kubernetes\:job-logs:
 	@echo -e "INFO: Monitoring job $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
-	@$(KUBECTL_SSH_CMD) $(KUBEUTIL) tail-job $(KUBERNETES_APP)
+	@if [ -z "$(CF_BUILD_ID)" ]; then \
+	  $(KUBECTL_SSH_CMD) $(KUBEUTIL) tail-job $(KUBERNETES_APP); \
+	else \
+	  $(KUBEUTIL) tail-job $(KUBERNETES_APP); \
+	fi
 
 ## Output the status of the deployment
 kubernetes\:status:
