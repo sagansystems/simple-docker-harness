@@ -1,9 +1,9 @@
 {
-  "title": "Failed to deploy $KUBERNETES_APP-$CIRCLE_BUILD_NUM to $CLUSTER_NAMESPACE",
-  "text": "Failed to deploy $KUBERNETES_APP build $CIRCLE_BUILD_NUM from branch $CIRCLE_BRANCH to $CLUSTER_NAMESPACE",
+  "title": "Failed to deploy $KUBERNETES_APP-$CI_BUILD_NUM to $CLUSTER_NAMESPACE.$CLUSTER_DOMAIN",
+  "text": "Failed to deploy $KUBERNETES_APP build $CI_BUILD_NUM from branch $CI_BRANCH to $CLUSTER_NAMESPACE.$CLUSTER_DOMAIN",
   "priority": "normal",
-  "tags": ["namespace:$CLUSTER_NAMESPACE","app:$KUBERNETES_APP","image:$IMAGE_TAG","build_number:$CIRCLE_BUILD_NUM","branch:$CIRCLE_BRANCH"],
+  "tags": ["cluster:$CLUSTER_NAMESPACE.$CLUSTER_DOMAIN","app:$KUBERNETES_APP","image:$IMAGE_TAG","build_number:$CI_BUILD_NUM","branch:$CI_BRANCH","deployment"],
   "alert_type": "error",
   "source_type_name": "circleci",
-  "aggregation_key": "$CLUSTER_NAMESPACE-$KUBERNETES_APP-$CIRCLE_BUILD_NUM"
+  "aggregation_key": "$CLUSTER_NAMESPACE.$CLUSTER_DOMAIN-$KUBERNETES_APP-$CI_BUILD_NUM"
 }

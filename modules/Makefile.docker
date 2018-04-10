@@ -55,7 +55,7 @@ DOCKER_BUILD_OPTS ?=
 .PHONY : docker\:build docker\:push docker\:pull docker\:clean docker\:run docker\:shell docker\:attach docker\:update docker\:start docker\:stop docker\:rm docker\:logs
 
 deps::
-	$(call assert_set DOCKER_CMD)
+	$(call assert_set,DOCKER_CMD)
 	@[ -x $(DOCKER_CMD) ] || (echo "$(DOCKER_CMD) not executable"; exit 1)
 
 ## Display info about the docker environment

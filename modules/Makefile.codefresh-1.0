@@ -1,0 +1,61 @@
+export CODEFRESH_VERSION = "1.0"
+
+.PHONY : codefresh\:deps codefresh\:git-tag-docker-latest codefresh\:deploy-kubernetes codefresh\:tag-deploy-cluster
+
+COMMIT ?= $(CF_REVISION)
+BUILD ?= $(CF_BRANCH_TAG_NORMALIZED)-$(CF_SHORT_REVISION)
+KUBECTL_NAMESPACE ?= sagan
+CODEFRESH_KUBERNETES_CONTEXT ?= $(CLUSTER_NAMESPACE)-$(subst .,-,$(CLUSTER_DOMAIN))
+DOCKER_BUILD_OPTS += --build-arg build=$(BUILD) --build-arg commit=$(COMMIT)
+
+# Calculate timestamp exactly once at first evaluation
+TIMESTAMP := $(shell date -u +'%Y%m%d%H%M%SZ')
+RELEASE ?= release-$(TIMESTAMP)
+
+export CI_BUILD_NUM ?= $(CF_BUILD_ID)
+export CI_BRANCH ?= $(CF_BRANCH_TAG_NORMALIZED)
+export COMMIT
+export RELEASE
+
+## Install Codefresh deps
+codefresh\:deps:
+	@echo "Configuring for Codefresh ${CODEFRESH_VERSION}"
+	@echo "INFO: Installing GitHub SSH key"
+	@echo -e "$(SSH_KEY)" > ~/.ssh/id_rsa
+	@chmod 600 ~/.ssh/id_rsa
+	@echo "INFO: Configuring github for ssh access"
+	@echo -e "[url \"ssh://git@github.com:\"]\\n\\tinsteadOf = https://github.com" >> ~/.gitconfig
+
+## Tag as [branch]-docker-latest in git
+codefresh\:git-tag-docker-latest:
+	@echo "INFO: Tagging git $(COMMIT) as $(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
+	@git fetch --tags
+	@git tag --force "$(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
+	@git push origin --force "tags/$(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
+
+## Tag using BUILD version and push to registry
+codefresh\:tag:
+	@$(call assert_set,BUILD)
+	@echo "INFO: Tagging $(COMMIT) as $(BUILD)"
+	@$(SELF) DOCKER_TAG=$(BUILD) docker:tag docker:push
+	@$(SELF) DOCKER_TAG=$(COMMIT) docker:tag docker:push
+
+
+## Deploy to kubernetes
+codefresh\:deploy-kubernetes:
+	$(call assert,IMAGE_TAG)
+	$(call assert,CF_BRANCH_TAG_NORMALIZED)
+	$(call assert,COMMIT)
+	## @[ ! -f "$(DOCKER_FILE)" ] || $(SELF) codefresh:tag
+	@$(SELF) kubernetes:info
+	@echo -e "INFO: Deploying $(IMAGE_TAG)"
+	@$(SELF) kubernetes:configure kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - commit $(COMMIT)"
+	@sleep 3
+	@$(SELF) kubernetes:list-deployments kubernetes:list-rs kubernetes:list-pods
+
+## Tag image as [branch]-docker-latest and deploy to the cluster
+codefresh\:tag-deploy-cluster: codefresh\:deps
+	@kubectl config set-context $(CODEFRESH_KUBERNETES_CONTEXT) --namespace=$(KUBECTL_NAMESPACE)
+	@kubectl config use-context $(CODEFRESH_KUBERNETES_CONTEXT)
+	@$(SELF) codefresh:git-tag-docker-latest
+	@$(SELF) codefresh:deploy-kubernetes

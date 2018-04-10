@@ -14,9 +14,10 @@ define datadog_notify_deploy
 	$(call assert,KUBERNETES_APP)
 	$(call assert,DATADOG_API_KEY)
 	$(call assert,CLUSTER_NAMESPACE)
+	$(call assert,CLUSTER_DOMAIN)
 	$(call assert,IMAGE_TAG)
-	$(call assert,CIRCLE_BUILD_NUM)
-	$(call assert,CIRCLE_BRANCH)
+	$(call assert,CI_BUILD_NUM)
+	$(call assert,CI_BRANCH)
 	@envsubst < $(MAKEFILE_DIR)/modules/datadog/$(1).json | $(CURL)
 endef
 
@@ -36,6 +37,7 @@ define datadog_notify_release
 	$(call assert,KUBERNETES_APP)
 	$(call assert,DATADOG_API_KEY)
 	$(call assert,CLUSTER_NAMESPACE)
+	$(call assert,CLUSTER_DOMAIN)
 	$(call assert,IMAGE_TAG)
 	@envsubst < $(MAKEFILE_DIR)/modules/datadog/$(1).json | $(CURL)
 endef
@@ -54,12 +56,12 @@ datadog\:notify-release-failure:
 
 ## Notify stdout of a release is starting
 datadog\:notify-stdout-starting:
-	@echo "INFO: Rollout of $(KUBERNETES_APP):$(IMAGE_TAG) to $(CLUSTER_NAMESPACE) starting."
+	@echo "INFO: Rollout of $(KUBERNETES_APP):$(IMAGE_TAG) to $(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN) starting."
 
 ## Notify stdout of a release was successful
 datadog\:notify-stdout-success:
-	@echo "INFO: Rollout of $(KUBERNETES_APP):$(IMAGE_TAG) to $(CLUSTER_NAMESPACE) successful."
+	@echo "INFO: Rollout of $(KUBERNETES_APP):$(IMAGE_TAG) to $(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN) successful."
 
 ## Notify stdout of a release failure
 datadog\:notify-stdout-failure:
-	@echo "INFO: Rollout of $(KUBERNETES_APP):$(IMAGE_TAG) to $(CLUSTER_NAMESPACE) failed."
+	@echo "INFO: Rollout of $(KUBERNETES_APP):$(IMAGE_TAG) to $(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN) failed."

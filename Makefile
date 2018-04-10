@@ -31,6 +31,10 @@ ifeq ($(CIRCLECI),true)
   endif
 endif
 
+ifdef CF_BUILD_ID # Codefresh
+  include $(MAKEFILE_DIR)/modules/Makefile.codefresh-1.0
+endif
+
 # Include the docker-specific targets
 include $(MAKEFILE_DIR)/modules/Makefile.docker
 

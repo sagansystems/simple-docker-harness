@@ -6,6 +6,9 @@ else
 BUILD ?= $(subst /,-,$(CIRCLE_BRANCH))-$(CIRCLE_BUILD_NUM)
 endif
 
+export CI_BUILD_NUM ?= $(CIRCLE_BUILD_NUM)
+export CI_BRANCH ?= $(CIRCLE_BRANCH)
+
 # Calculate timestamp exactly once at first evaluation
 TIMESTAMP := $(shell date -u +'%Y%m%d%H%M%SZ')
 COMMIT ?= $(CIRCLE_SHA1)

@@ -6,6 +6,7 @@
   - [Using Build Harness in other repositories](#using-build-harness-in-other-repositories)
   - [Building images](#building-images)
   - [CircleCI Integration](#circleci-integration)
+  - [Codefresh Integration](#codefresh-integration)
 
 <!-- /MarkdownTOC -->
 
@@ -40,6 +41,14 @@ Run `make help` to get a list of available build targets
   circle:tag                Tag and push to registry (CircleCI)
   circle:release            Tag and push official release to registry (CircleCI)
   circle:cleanup-docker     Cleanup Docker images from CircleCI Docker cache. Calling it once in workflow (for example in the "build" job) should be enough.
+
+# Targets Available on Codefresh
+
+  codefresh:deps                      Install Codefresh deps
+  codefresh:git-tag-docker-latest     Tag as [branch]-docker-latest in git
+  codefresh:tag                       Tag using BUILD version and push to registry
+  codefresh:deploy-kubernetes         Deploy to kubernetes
+  codefresh:tag-deploy-cluster        Tag image as [branch]-docker-latest and deploy to the cluster
 ```
 
 ## Setting up your development environment
@@ -94,7 +103,7 @@ references:
     working_directory: ~/chat-sdk # This should match your project's name
 
   download_build_harness: &download_build_harness
-    run: 
+    run:
         name: Download build-harness
         command: curl --retry 5 --retry-delay 1 https://raw.githubusercontent.com/sagansystems/build-harness/master/bin/circleci.sh | bash -x -s
 
@@ -119,7 +128,7 @@ jobs:
       - checkout
       - *download_build_harness
       - run: make docker:login
-      - run: 
+      - run:
           name: Tag images
           command: make circle:tag          # Tag and publish using branch and build number
       - run:
@@ -135,7 +144,7 @@ jobs:
               make kubernetes:deploy:  # Deloy to master.gladly.com
             fi
           environment:
-            CLUSTER_NAMESPACE: master 
+            CLUSTER_NAMESPACE: master
             CLUSTER_DOMAIN: gladly.com
 
 workflows:
@@ -148,8 +157,31 @@ workflows:
             - build
           filters:
             branches:
-              only: 
+              only:
                 - master
                 - /release.*/
                 - /.*migration.*/
+```
+
+
+## Codefresh Integration
+
+Codefresh will use the `codefresh` tag of build-harness. Once your build-harness change is merged into master, please advance the `codefresh` tag. You can also temporarily tag your branch with this tag to test your changes.
+
+Here's a minimal example of what is needed for Codefresh. Add/merge the following to your projects `codefresh.yml` file.
+```yaml
+  deploy_master:
+    title: Deploy to master
+    image: sagan/build-harness:codefresh
+    working_directory: ${{main_clone}}
+    environment:
+      - CLUSTER_NAMESPACE=master
+      - CLUSTER_DOMAIN=gladly.qa
+      - IMAGE_TAG=${{CF_BRANCH_TAG_NORMALIZED}}-${{CF_SHORT_REVISION}}
+    commands:
+      - make codefresh:tag-deploy-cluster
+    when:
+      branch:
+        only:
+          - master
 ```
