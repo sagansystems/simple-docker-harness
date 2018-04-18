@@ -71,10 +71,10 @@ circle\:deploy-kubernetes:
 	@$(SELF) kubernetes:info
 	@if [ -z "$(CIRCLE_TOKEN)" ]; then \
 	  echo -e "$(call red,WARN:) Deploying $(IMAGE_TAG) without obtaining lock; CIRCLE_TOKEN not defined"; \
-	  $(SELF) kubernetes:configure kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - commit $(COMMIT)"; \
+	  $(SELF) kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - commit $(COMMIT)"; \
   else \
 	  echo "INFO: Deploying $(IMAGE_TAG)"; \
-	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:configure kubernetes:deploy; \
+	  $(MAKEFILE_DIR)/bin/circle-do-exclusively.sh --branch $(CIRCLE_BRANCH) $(SELF) kubernetes:deploy; \
   fi
 	@sleep 3
 	@$(SELF) kubernetes:list-deployments kubernetes:list-rs kubernetes:list-pods

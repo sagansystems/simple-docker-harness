@@ -49,7 +49,7 @@ codefresh\:deploy-kubernetes:
 	## @[ ! -f "$(DOCKER_FILE)" ] || $(SELF) codefresh:tag
 	@$(SELF) kubernetes:info
 	@echo -e "INFO: Deploying $(IMAGE_TAG)"
-	@$(SELF) kubernetes:configure kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - commit $(COMMIT)"
+	@$(SELF) kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - commit $(COMMIT)"
 	@sleep 3
 	@$(SELF) kubernetes:list-deployments kubernetes:list-rs kubernetes:list-pods
 

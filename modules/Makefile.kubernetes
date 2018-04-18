@@ -121,27 +121,6 @@ kubernetes\:delete-horizontalpodautoscaler:
 kubernetes\:apply-horizontalpodautoscaler:
 	$(call kubectl_apply,horizontalpodautoscaler)
 
-# (private) Delete a configmap
-kubernetes\:delete-configmap:
-	$(call kubectl_delete,configmap)
-
-# (private) Update configmap or create, if necessary
-kubernetes\:apply-configmap:
-	$(call kubectl_apply,configmap)
-
-# (private) Delete a secrets
-kubernetes\:delete-secrets:
-	$(call kubectl_delete,secrets)
-
-# (private) Update secrets or create, if necessary
-kubernetes\:apply-secrets:
-	$(call kubectl_apply,secrets)
-
-## Update app configmaps and secrets
-kubernetes\:configure:
-	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-configmap.yml" ] || $(SELF) kubernetes:apply-configmap || $(NOTIFY_FAILURE)
-	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-secrets.yml" ] || $(SELF) kubernetes:apply-secrets || $(NOTIFY_FAILURE)
-	
 # (private) Delete a service
 kubernetes\:delete-service:
 	$(call kubectl_delete,service)
