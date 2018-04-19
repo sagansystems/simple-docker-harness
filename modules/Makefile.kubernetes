@@ -21,10 +21,10 @@ KUBECTL_STATUS ?= true
 SERIAL ?= $(shell echo -n $$(date +%s) | tail -c 5)
 export SERIAL
 
-# Specify DEBUG=/dev/stderr to get useful output to stderr 
+# Specify DEBUG=/dev/stderr to get useful output to stderr
 DEBUG ?= /dev/null
 
-define envsubst 
+define envsubst
 	envsubst < "$(1)" | envsubst | tee $(DEBUG)
 endef
 
@@ -78,13 +78,21 @@ endif
 #  - https://cloud.google.com/container-engine/docs/kubectl/
 #
 ## Bring up SSH tunnel for kubernetes commands, must be called before executing any targets
+## Skip on Codefresh indicated when CF_BUILD_ID is present
+## We skip tunnel up on Codefresh because it has direct access to kubernetes
 kubernetes\:tunnel-up:
-	@echo "Please authenticate using your MFA device..."
-	@ssh $(KUBECTL_SSH_OPTS) -M -f -N $(KUBECTL_SSH_TUNNEL)
+	@if [ -z "$(CF_BUILD_ID)" ]; then \
+		echo "Please authenticate using your MFA device..."; \
+		ssh $(KUBECTL_SSH_OPTS) -M -f -N $(KUBECTL_SSH_TUNNEL); \
+	fi;
 
 ## Tear down kubernetes SSH tunnel, must be called after executing other targets
+## Skip on Codefresh indicated when CF_BUILD_ID is present
+## We skip tunnel up on Codefresh because it has direct access to kubernetes
 kubernetes\:tunnel-down:
-	@[ -e $(KUBECTL_SSH_SOCK) ] && ssh -S $(KUBECTL_SSH_SOCK) -O exit $(KUBECTL_SSH_TUNNEL)
+	@if [ -z "$(CF_BUILD_ID)" ]; then \
+		[ -e $(KUBECTL_SSH_SOCK) ] && ssh -S $(KUBECTL_SSH_SOCK) -O exit $(KUBECTL_SSH_TUNNEL); \
+	fi;
 
 ## Display info about the kubernetes setup
 kubernetes\:info:
