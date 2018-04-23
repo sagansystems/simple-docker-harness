@@ -1,0 +1,233 @@
+#!/bin/bash
+export PATH="/opt/bin:$PATH"
+
+if [ -f /etc/secrets/kops ]; then
+  . /etc/secrets/kops
+fi
+
+OUTPUT_TYPE="${OUTPUT_TYPE:-yaml}"
+KUBERNETES_RESOURCES="${KUBERNETES_RESOURCES:-namespaces secrets configmaps services deployments horizontalpodautoscalers ingress}"
+KUBERNETES_NAMESPACE=${KUBERNETES_NAMESPACE:-$(kubectl config view -o jsonpath='{.contexts[?(@.name == "${KUBECTL_DEFAULT_CONTEXT}")].context.namespace}')}
+SCHEMA_CACHE_DIR="/tmp/$USER.kubectl.schema"
+
+# Remove fields that we don't use, but which can lead to import problems down the road
+# e.g. `metadata.resourceVersion: Invalid value: "": must be specified for an update`
+# e.g. `spec.clusterIP: Invalid value: "": field is immutable`
+
+FILTER_EXPORT='/\b(creationTimestamp|clusterIP|resourceVersion|uid|selfLink):/d'
+
+function import_resources() {
+  local import_dir=$1
+  local namespace_path="$import_dir/namespaces.$OUTPUT_TYPE"
+  local resource
+  local resource_path
+  local resource_import_count
+
+  # Check if the directory exists, otherwise exit
+  if [ ! -d "$import_dir" ]; then
+    echo "ERROR: $import_dir directory not found"
+    exit 1
+  fi
+
+  echo "Importing resources to $import_dir"
+
+  if [ -n "$KUBERNETES_NAMESPACE" ]; then
+    destroy_resources "$KUBERNETES_NAMESPACE"
+  fi
+
+  (( resource_import_count = 0 ))
+  # Import each of the resources, in order
+  for resource in $KUBERNETES_RESOURCES; do
+    resource_path="$import_dir/$resource.$OUTPUT_TYPE"
+    if [ -f $resource_path ]; then
+      echo -n "Importing $resource"
+      if [ "$resource" == "deployments" ]; then
+        # deployments should be applied 
+        kubectl --namespace=${KUBERNETES_NAMESPACE} apply --schema-cache-dir="$SCHEMA_CACHE_DIR" -f "$resource_path" --validate=false >/dev/null 2>&1
+      else 
+        kubectl --namespace=${KUBERNETES_NAMESPACE} apply --schema-cache-dir="$SCHEMA_CACHE_DIR" -f "$resource_path" >/dev/null 2>&1
+      fi
+      if [ $? -eq 0 ]; then
+        echo "...done"
+      else
+        echo "...failed"
+        exit 1
+      fi
+      (( resource_import_count++ ))
+    else
+      echo "Importing $resource...not found"
+    fi
+  done
+
+  # Indicate if nothing was performed
+  if [ $resource_import_count -eq 0 ]; then
+    echo "Nothing to import from $import_dir"
+  fi
+}
+
+function export_resources() {
+  local export_dir=$1
+  local resource
+  local resource_path
+  local resource_export_count
+
+  [ -d "$export_dir" ] || mkdir -p "$export_dir"
+  echo "Exporting resources to $export_dir"
+  (( resource_export_count = 0 ))
+  for resource in $KUBERNETES_RESOURCES; do
+    resource_count=$(kubectl --namespace=${KUBERNETES_NAMESPACE} get $resource --no-headers | grep -v '^default' | wc -l )
+    if [ $resource_count -gt 0 ]; then
+      echo -n "Exporting $resource"
+      resource_path="$export_dir/$resource.$OUTPUT_TYPE"
+      # Only export namespace that we're operating inside 
+      if [ "$resource" == "namespaces" ]; then
+        kubectl --namespace=${KUBERNETES_NAMESPACE} get $resource $KUBERNETES_NAMESPACE --export -o $OUTPUT_TYPE | sed -E $FILTER_EXPORT > "$resource_path"
+        result=$?
+      else
+        kubectl --namespace=${KUBERNETES_NAMESPACE} get $resource --export -o $OUTPUT_TYPE | sed -E $FILTER_EXPORT > "$resource_path"
+        result=$?
+      fi
+      if [ $result -eq 0 ]; then
+        chown core:core "$resource_path" || true 
+        echo "...done"
+      else
+        echo "...failed"
+        exit 1
+      fi
+      (( resource_export_count++ ))
+    else
+      echo "Resource $resource is empty"
+    fi
+  done
+
+  # Indicate if nothing was performed
+  if [ $resource_export_count -eq 0 ]; then
+    echo "Nothing to export to $export_dir"
+  fi
+}
+
+function destroy_resources() {
+  local namespace=$1
+
+  if [ -f "$namespace" ]; then
+    namespace=$KUBERNETES_NAMESPACE
+  fi
+
+  if [ -z "$namespace" ]; then
+    echo "Unable to determine namespace"
+    exit 1
+  fi
+
+  echo -n "Deleting $namespace namespace"
+  kubectl delete namespace "$namespace" --ignore-not-found >/dev/null 2>&1 
+
+ # Now wait for it to complete; it will return non-zero while it's deleting and zero if it doesn't exist
+  until (kubectl delete namespace "$namespace" --ignore-not-found >/dev/null 2>&1); do
+    echo -n "."
+    sleep 1;
+  done
+  echo "...done"
+}
+
+# Increments serial label for deployment
+function bump() {
+  local deployment
+  for deployment in $*; do
+    echo -n "Bumping $deployment... "
+    kubectl --namespace=${KUBERNETES_NAMESPACE} get deployment "$deployment" --export -o yaml | sed -r "s/(serial:).*$/\\1 \"$(date +%s)\"/g" | kubectl --namespace=${KUBERNETES_NAMESPACE} apply -f -
+  done
+}
+
+function format_path() {
+  date "+$*"
+}
+
+
+function help() {
+  echo -e "Kubernetes Utilities:\n"
+  grep '^##' $0 |sed 's:^##\s*::' | awk '{printf "  %-20s %s\n", $1, substr($0, index($0,$2)) }'
+  echo 
+}
+
+# Tails logs and return job exit code
+function tail_job() {
+    local job=$1
+    local job_stats
+    echo -e "Waiting for job $job to start..."
+	while [[ $$job_stats != "Running" && $job_stats != "Completed" && $job_stats != "Failed" ]]; do
+	    sleep 1
+	    job_stats=`kubectl get pods -a --no-headers -l job-name=$job | tr -s ' ' | cut -d ' ' -f3`
+	    echo "Job Status: $job_stats"
+	done
+	echo -e "Job logs for $job:\n"
+	kubectl logs -f `kubectl get pods -a -l job-name=$job -o name`
+	local num='^[0-9]+$$'
+    local exit_code
+	while ! [[ $exit_code =~ $num ]]; do
+		sleep 1
+		exit_code=`kubectl get pods -a -l job-name=$job -o jsonpath={.items..status.containerStatuses[0]..exitCode} 2>&1`
+		if [[ $exit_code = "No resources found." ]]; then
+			echo "failed to find job exit code"
+			exit 1
+		fi
+	done
+	exit $EXIT_CODE
+}
+
+which kubectl >/dev/null
+if [ $? -ne 0 ]; then
+  echo "ERROR: Add 'kubectl' to your path"
+  exit 1
+fi
+
+## help: This dialog :)
+if [ "$1" == "help" ] || [ $# -eq 0 ]; then 
+  help
+  exit 0
+## import: load resources from directory
+elif [ "$1" == "import" ]; then
+  if [ "$#" -eq 2 ]; then
+    import_resources "$2"
+  else
+    echo "Usage: $0 import [directory]"
+    exit 1
+  fi
+## export: dump resources to directory
+elif [ "$1" == "export" ]; then
+  if [ "$#" -eq 2 ]; then
+    export_resources "$(format_path $2)"
+  else
+    echo "Usage: $0 export [directory]"
+    exit 1
+  fi
+## destroy: destroy all resources in a namespace (including the namespace)
+elif [ "$1" == "destroy" ]; then
+  if [ "$#" -eq 2 ]; then
+    destroy_resources "$(format_path $2)"
+  else
+    echo "Usage: $0 destroy [namespace]"
+    exit 1
+  fi
+## bump: modify serial for deployment triggering rolling-update of all pods
+elif [ "$1" == "bump" ]; then
+  if [ "$#" -ge 2 ]; then
+    # shift $1 off the stack
+    set -- "${@:2}"
+    bump $*
+  else
+    echo "Usage: $0 bump [deployment(s)]"
+    exit 1
+  fi
+## tail-job: watch for start of a job and tail its logs
+elif [ "$1" == "tail-job" ]; then
+  if [ "$#" -eq 2 ]; then
+    # shift $1 off the stack
+    tail_job $2
+  else
+    echo "Usage: $0 tail-job [job name]"
+    exit 1
+  fi
+else
+  help
+  exit 1
+fi

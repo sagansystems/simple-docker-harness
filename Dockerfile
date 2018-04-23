@@ -24,8 +24,8 @@ RUN mkdir -p ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" 
 ENV BUILD_HARNESS_PATH /gladly/build-harness
 ENV KUBECTL_CMD /usr/local/bin/kubectl
 ENV KUBECTL /usr/local/bin/kubectl
-
-WORKDIR /gladly/build-harness
+ENV KUBEUTIL $BUILD_HARNESS_PATH/kube-util
+WORKDIR $BUILD_HARNESS_PATH
 
 COPY . .
 

@@ -59,3 +59,12 @@ codefresh\:tag-deploy-cluster: codefresh\:deps
 	@kubectl config use-context $(CODEFRESH_KUBERNETES_CONTEXT)
 	@$(SELF) codefresh:git-tag-docker-latest
 	@$(SELF) codefresh:deploy-kubernetes
+
+## Run job on kubernetes
+codefresh\:run-job-kubernetes:
+	$(call assert,IMAGE_TAG)
+	$(call assert,JOB_KUBERNETES_APP)
+	@kubectl config set-context $(CODEFRESH_KUBERNETES_CONTEXT) --namespace=$(KUBECTL_NAMESPACE)
+	@kubectl config use-context $(CODEFRESH_KUBERNETES_CONTEXT)
+	@echo -e "INFO: Running $(JOB_KUBERNETES_APP):$(IMAGE_TAG) on $(CODEFRESH_KUBERNETES_CONTEXT)"
+	@$(SELF) kubernetes:run-job kubernetes:job-logs KUBERNETES_APP=$(JOB_KUBERNETES_APP)
