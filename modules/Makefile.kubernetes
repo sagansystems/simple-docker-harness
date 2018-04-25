@@ -1,6 +1,8 @@
 CLUSTER_NAMESPACE ?=
-CLUSTER_DOMAIN ?= mertslounge.ca
-CLUSTER_BASTION ?= bastion.$(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN)
+CLUSTER_DOMAIN ?= gladly.qa
+CLUSTER ?= $(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN)
+CLUSTER_BASTION ?= bastion.$(CLUSTER)
+export CLUSTER
 export CLUSTER_NAMESPACE
 
 KUBERNETES_ANNOTATION ?= $(shell date -u +'%Y-%m-%d %H:%M:%SZ')
@@ -55,18 +57,18 @@ ifeq ($(CIRCLECI),true)
 endif
 
 ifeq ($(strip $(KUBECTL_SSH_USER)),)
-  # Guess their github username
-	KUBECTL_SSH_USER = $(shell ssh git@github.com 2>&1 | grep 'successfully authenticated' | cut -d' ' -f2 | cut -d'!' -f1 | tr A-Z a-z)
+	KUBECTL_SSH_USER = root
 endif
 
+SSH_PROXY_OPTIONS := -i ~/.tsh/keys/portal.$(CLUSTER)/$(OKTA_USER) -o ProxyCommand='ssh -p 3023 -i ~/.tsh/keys/portal.$(CLUSTER)/$(OKTA_USER) $(KUBECTL_SSH_USER)@portal.$(CLUSTER) -s proxy:bastion.$(CLUSTER):3022' portal.$(CLUSTER)
+
 # More kubectl specific settings
-KUBECTL_SSH_TUNNEL ?= $(KUBECTL_SSH_USER)@$(CLUSTER_BASTION)
-KUBECTL_SSH_SOCK ?= /tmp/kubectl-$(KUBECTL_SSH_TUNNEL)
-KUBECTL_SSH_OPTS := -A -o 'LogLevel=error' -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' -S $(KUBECTL_SSH_SOCK)
+KUBECTL_SSH_SOCK ?= /tmp/kubectl-$(CLUSTER_BASTION)
+KUBECTL_SSH_OPTS := -l $(KUBECTL_SSH_USER) -A -o 'LogLevel=error' -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' -S $(KUBECTL_SSH_SOCK)
 KUBECTL_SSH_CMD := ssh $(KUBECTL_SSH_OPTS)
 
 # Add the SSH endpoint to the command; everything after the host is expected to be a remote command
-KUBECTL_SSH_CMD += $(KUBECTL_SSH_TUNNEL)
+KUBECTL_SSH_CMD += $(CLUSTER_BASTION)
 
 KUBECTL_CMD ?= $(KUBECTL_SSH_CMD) "$(KUBECTL)" --logtostderr=true --insecure-skip-tls-verify=true
 ifeq ($(CIRCLE_VERSION),"1.0")
@@ -82,8 +84,8 @@ endif
 ## We skip tunnel up on Codefresh because it has direct access to kubernetes
 kubernetes\:tunnel-up:
 	@if [ -z "$(CF_BUILD_ID)" ]; then \
-		echo "Please authenticate using your MFA device..."; \
-		ssh $(KUBECTL_SSH_OPTS) -M -f -N $(KUBECTL_SSH_TUNNEL); \
+		tsh login --proxy=portal.$(CLUSTER); \
+		ssh $(SSH_PROXY_OPTIONS) $(KUBECTL_SSH_OPTS) -M -f -N $(CLUSTER); \
 	fi;
 
 ## Tear down kubernetes SSH tunnel, must be called after executing other targets
@@ -91,14 +93,12 @@ kubernetes\:tunnel-up:
 ## We skip tunnel up on Codefresh because it has direct access to kubernetes
 kubernetes\:tunnel-down:
 	@if [ -z "$(CF_BUILD_ID)" ]; then \
-		[ -e $(KUBECTL_SSH_SOCK) ] && ssh -S $(KUBECTL_SSH_SOCK) -O exit $(KUBECTL_SSH_TUNNEL); \
+		[ -e $(KUBECTL_SSH_SOCK) ] && ssh -S $(KUBECTL_SSH_SOCK) -O exit $(CLUSTER); \
 	fi;
 
 ## Display info about the kubernetes setup
 kubernetes\:info:
-	@echo -e "Cluster Namespace: $(call yellow,$(CLUSTER_NAMESPACE))"
-	@echo -e "Cluster Domain: $(call yellow,$(CLUSTER_DOMAIN))"
-	@echo -e "SSH Tunnel: $(call yellow,$(KUBECTL_SSH_TUNNEL))"
+	@echo -e "Cluster: $(call yellow,$(CLUSTER))"
 	@echo -e "SSH User: $(call yellow,$(KUBECTL_SSH_USER))"
 
 # (private) Validate a configuration
@@ -115,9 +115,8 @@ kubernetes\:apply-resource:
 	@if [ ! -f "$(KUBERNETES_FQ_RESOURCE)" ]; then \
 		echo 'File $(KUBERNETES_FQ_RESOURCE) does not exist'; exit 1; \
 	fi;
-	$(call assert,CLUSTER_NAMESPACE)
-	$(call assert,CLUSTER_DOMAIN)
-	@echo -e "INFO: Applying changes to $(KUBERNETES_FQ_RESOURCE) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	$(call assert,CLUSTER)
+	@echo -e "INFO: Applying changes to $(KUBERNETES_FQ_RESOURCE) on cluster $(call yellow,$(CLUSTER))..."
 	@$(call envsubst,$(KUBERNETES_FQ_RESOURCE)) | $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) -f -
 
 
@@ -156,12 +155,12 @@ kubernetes\:apply-deployment:
 
 ## Rollback to previous deployment
 kubernetes\:undo-deployment:
-	@echo -e "INFO: Rolling back to previous deployment of $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Rolling back to previous deployment of $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) rollout undo deployment $(KUBERNETES_APP)
 
 ## Deploy everything that needs to be deployed; notify datadog
 kubernetes\:deploy:
-	@echo -e "INFO: Deploying $(KUBERNETES_APP) resources on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Deploying $(KUBERNETES_APP) resources on cluster $(call yellow,$(CLUSTER))..."
 	$(NOTIFY_STARTING)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-deployment.yml" ] || $(SELF) kubernetes:apply-deployment || $(NOTIFY_FAILURE)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" ] || $(SELF) kubernetes:apply-controller || $(NOTIFY_FAILURE)
@@ -185,7 +184,7 @@ kubernetes\:run-job:
 
 ## Show job logs and return job exit code, requires SSH if ran outside Codefresh
 kubernetes\:job-logs:
-	@echo -e "INFO: Monitoring job $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Monitoring job $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
 	@if [ -z "$(CF_BUILD_ID)" ]; then \
 	  $(KUBECTL_SSH_CMD) $(KUBEUTIL) tail-job $(KUBERNETES_APP); \
 	else \
@@ -198,32 +197,32 @@ kubernetes\:status:
 
 ## List deployed replication controllers for app
 kubernetes\:list-rc:
-	@echo -e "INFO: Listing replication controllers for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Listing replication controllers for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) get rc -L tag --selector app=$(KUBERNETES_APP)
 
 ## List deployed replica sets for app
 kubernetes\:list-rs:
-	@echo -e "INFO: Listing replica sets for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Listing replica sets for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) get rs -L tag --selector app=$(KUBERNETES_APP) | grep -Ev '\s+0\s+0\s+'
 
 ## List deployed pods for app
 kubernetes\:list-pods:
-	@echo -e "INFO: Listing pods for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Listing pods for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) get pods -L tag --selector app=$(KUBERNETES_APP)
 
 ## List deployed services
 kubernetes\:list-svc:
-	@echo -e "INFO: Listing services on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Listing services on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) get svc
 
 ## Show deployment history
 kubernetes\:deployment-history:
-	@echo -e "INFO: Listing deployments of $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Listing deployments of $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) rollout history deployment $(KUBERNETES_APP)
 
 ## List everything that's deployed
 kubernetes\:list-deployments:
-	@echo -e "INFO: Listing deployments on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Listing deployments on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) get deployments -L tag
 
 
