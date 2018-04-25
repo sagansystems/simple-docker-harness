@@ -119,6 +119,22 @@ kubernetes\:apply-resource:
 	@echo -e "INFO: Applying changes to $(KUBERNETES_FQ_RESOURCE) on cluster $(call yellow,$(CLUSTER))..."
 	@$(call envsubst,$(KUBERNETES_FQ_RESOURCE)) | $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) -f -
 
+kubernetes\:create-resource:
+	@if [ ! -f "$(KUBERNETES_FQ_RESOURCE)" ]; then \
+		echo 'File $(KUBERNETES_FQ_RESOURCE) does not exist'; exit 1; \
+	fi;
+	$(call assert,CLUSTER)
+	@echo -e "INFO: Creating resource for $(KUBERNETES_FQ_RESOURCE) on cluster $(call yellow,$(CLUSTER))..."
+	@$(call envsubst,$(KUBERNETES_FQ_RESOURCE)) | $(KUBECTL_CMD) create $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+
+kubernetes\:delete-resource:
+	@if [ ! -f "$(KUBERNETES_FQ_RESOURCE)" ]; then \
+		echo 'File $(KUBERNETES_FQ_RESOURCE) does not exist'; exit 1; \
+	fi;
+	$(call assert,CLUSTER)
+	@echo -e "INFO: Deleting resource for $(KUBERNETES_FQ_RESOURCE) on cluster $(call yellow,$(CLUSTER))..."
+	@$(call envsubst,$(KUBERNETES_FQ_RESOURCE)) | $(KUBECTL_CMD) delete --ignore-not-found=true -f -
+
 
 # (private) Delete a horizontalpodautoscaler
 kubernetes\:delete-horizontalpodautoscaler:
