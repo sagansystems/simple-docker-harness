@@ -27,7 +27,7 @@ codefresh\:deps:
 	@echo -e "[url \"ssh://git@github.com:\"]\\n\\tinsteadOf = https://github.com" >> ~/.gitconfig
 
 ## Tag as [branch]-docker-latest in git
-codefresh\:git-tag-docker-latest:
+codefresh\:git-tag-docker-latest: codefresh\:deps
 	@echo "INFO: Tagging git $(COMMIT) as $(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
 	@git fetch --tags
 	@git tag --force "$(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
@@ -54,7 +54,7 @@ codefresh\:deploy-kubernetes:
 	@$(SELF) kubernetes:list-deployments kubernetes:list-rs kubernetes:list-pods
 
 ## Tag image as [branch]-docker-latest and deploy to the cluster
-codefresh\:tag-deploy-cluster: codefresh\:deps
+codefresh\:tag-deploy-cluster:
 	@kubectl config set-context $(CODEFRESH_KUBERNETES_CONTEXT) --namespace=$(KUBECTL_NAMESPACE)
 	@kubectl config use-context $(CODEFRESH_KUBERNETES_CONTEXT)
 	@$(SELF) codefresh:git-tag-docker-latest
