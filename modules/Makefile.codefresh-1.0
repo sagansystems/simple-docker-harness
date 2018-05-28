@@ -40,13 +40,17 @@ codefresh\:tag:
 	@$(SELF) DOCKER_TAG=$(BUILD) docker:tag docker:push
 	@$(SELF) DOCKER_TAG=$(COMMIT) docker:tag docker:push
 
+## Set Codefresh context
+codefresh\:set-context
+	@kubectl config set-context $(CODEFRESH_KUBERNETES_CONTEXT) --namespace=$(KUBECTL_NAMESPACE)
+	@kubectl config use-context $(CODEFRESH_KUBERNETES_CONTEXT)
 
 ## Deploy to kubernetes
 codefresh\:deploy-kubernetes:
 	$(call assert,IMAGE_TAG)
 	$(call assert,CF_BRANCH_TAG_NORMALIZED)
 	$(call assert,COMMIT)
-	## @[ ! -f "$(DOCKER_FILE)" ] || $(SELF) codefresh:tag
+	@$(SELF) codefresh:set-context
 	@$(SELF) kubernetes:info
 	@echo -e "INFO: Deploying $(IMAGE_TAG)"
 	@$(SELF) kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - commit $(COMMIT)"
@@ -55,8 +59,6 @@ codefresh\:deploy-kubernetes:
 
 ## Tag image as [branch]-docker-latest and deploy to the cluster
 codefresh\:tag-deploy-cluster:
-	@kubectl config set-context $(CODEFRESH_KUBERNETES_CONTEXT) --namespace=$(KUBECTL_NAMESPACE)
-	@kubectl config use-context $(CODEFRESH_KUBERNETES_CONTEXT)
 	@$(SELF) codefresh:git-tag-docker-latest
 	@$(SELF) codefresh:deploy-kubernetes
 
@@ -64,7 +66,6 @@ codefresh\:tag-deploy-cluster:
 codefresh\:run-job-kubernetes:
 	$(call assert,IMAGE_TAG)
 	$(call assert,JOB_KUBERNETES_APP)
-	@kubectl config set-context $(CODEFRESH_KUBERNETES_CONTEXT) --namespace=$(KUBECTL_NAMESPACE)
-	@kubectl config use-context $(CODEFRESH_KUBERNETES_CONTEXT)
+	@$(SELF) codefresh:set-context
 	@echo -e "INFO: Running $(JOB_KUBERNETES_APP):$(IMAGE_TAG) on $(CODEFRESH_KUBERNETES_CONTEXT)"
 	@$(SELF) kubernetes:run-job kubernetes:job-logs KUBERNETES_APP=$(JOB_KUBERNETES_APP)
