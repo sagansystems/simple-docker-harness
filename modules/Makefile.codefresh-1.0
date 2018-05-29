@@ -41,7 +41,7 @@ codefresh\:tag:
 	@$(SELF) DOCKER_TAG=$(COMMIT) docker:tag docker:push
 
 ## Set Codefresh context
-codefresh\:set-context
+codefresh\:set-context:
 	@kubectl config set-context $(CODEFRESH_KUBERNETES_CONTEXT) --namespace=$(KUBECTL_NAMESPACE)
 	@kubectl config use-context $(CODEFRESH_KUBERNETES_CONTEXT)
 
