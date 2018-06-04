@@ -13,7 +13,6 @@ export KUBERNETES_APP
 
 # Kubectl specific settings
 KUBECTL ?= /opt/bin/kubectl
-KUBECTL_SCHEMA_CACHE_DIR ?= --schema-cache-dir=.kube/cache
 KUBEUTIL ?= /opt/bin/kube-util
 
 # Flag to control whether or not `kubernetes:status` is called on deployments
@@ -34,14 +33,14 @@ define kubectl_apply
 	$(call assert,CLUSTER_NAMESPACE)
 	$(call assert,CLUSTER_DOMAIN)
 	@echo -e "INFO: Applying changes to $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
-	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) $(2) -f -
+	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) apply $(2) -f -
 endef
 
 define kubectl_create
 	$(call assert,CLUSTER_NAMESPACE)
 	$(call assert,CLUSTER_DOMAIN)
 	@echo -e "INFO: Creating $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
-	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) create $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) create -f -
 endef
 
 define kubectl_delete
@@ -117,7 +116,7 @@ kubernetes\:apply-resource:
 	fi;
 	$(call assert,CLUSTER)
 	@echo -e "INFO: Applying changes to $(KUBERNETES_FQ_RESOURCE) on cluster $(call yellow,$(CLUSTER))..."
-	@$(call envsubst,$(KUBERNETES_FQ_RESOURCE)) | $(KUBECTL_CMD) apply $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+	@$(call envsubst,$(KUBERNETES_FQ_RESOURCE)) | $(KUBECTL_CMD) apply -f -
 
 kubernetes\:create-resource:
 	@if [ ! -f "$(KUBERNETES_FQ_RESOURCE)" ]; then \
@@ -125,7 +124,7 @@ kubernetes\:create-resource:
 	fi;
 	$(call assert,CLUSTER)
 	@echo -e "INFO: Creating resource for $(KUBERNETES_FQ_RESOURCE) on cluster $(call yellow,$(CLUSTER))..."
-	@$(call envsubst,$(KUBERNETES_FQ_RESOURCE)) | $(KUBECTL_CMD) create $(KUBECTL_SCHEMA_CACHE_DIR) -f -
+	@$(call envsubst,$(KUBERNETES_FQ_RESOURCE)) | $(KUBECTL_CMD) create -f -
 
 kubernetes\:delete-resource:
 	@if [ ! -f "$(KUBERNETES_FQ_RESOURCE)" ]; then \
