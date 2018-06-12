@@ -19,6 +19,7 @@ export RELEASE
 
 ## Install Codefresh deps
 codefresh\:deps:
+	@$(call assert_set,SSH_KEY)
 	@echo "Configuring for Codefresh ${CODEFRESH_VERSION}"
 	@echo "INFO: Installing GitHub SSH key"
 	@echo -e "$(SSH_KEY)" > ~/.ssh/id_rsa
@@ -28,6 +29,8 @@ codefresh\:deps:
 
 ## Tag as [branch]-docker-latest in git
 codefresh\:git-tag-docker-latest: codefresh\:deps
+	@$(call assert_set,COMMIT)
+	@$(call assert_set,CF_BRANCH_TAG_NORMALIZED)
 	@echo "INFO: Tagging git $(COMMIT) as $(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
 	@git fetch --tags
 	@git tag --force "$(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
@@ -36,12 +39,15 @@ codefresh\:git-tag-docker-latest: codefresh\:deps
 ## Tag using BUILD version and push to registry
 codefresh\:tag:
 	@$(call assert_set,BUILD)
+	@$(call assert_set,COMMIT)
 	@echo "INFO: Tagging $(COMMIT) as $(BUILD)"
 	@$(SELF) DOCKER_TAG=$(BUILD) docker:tag docker:push
 	@$(SELF) DOCKER_TAG=$(COMMIT) docker:tag docker:push
 
 ## Set Codefresh context
 codefresh\:set-context:
+	@$(call assert_set,CODEFRESH_KUBERNETES_CONTEXT)
+	@$(call assert_set,KUBECTL_NAMESPACE)
 	@kubectl config set-context $(CODEFRESH_KUBERNETES_CONTEXT) --namespace=$(KUBECTL_NAMESPACE)
 	@kubectl config use-context $(CODEFRESH_KUBERNETES_CONTEXT)
 
