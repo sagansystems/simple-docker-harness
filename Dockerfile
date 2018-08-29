@@ -21,6 +21,9 @@ RUN apk add --no-cache --update bash && \
 # Avoid unknown host for github
 RUN mkdir -p ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
 
+ENV USER gladly
+USER $USER
+
 ENV BUILD_HARNESS_PATH /gladly/build-harness
 ENV KUBECTL_CMD /usr/local/bin/kubectl
 ENV KUBECTL /usr/local/bin/kubectl
