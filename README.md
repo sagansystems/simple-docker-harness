@@ -65,7 +65,7 @@ Run `make help` to get a list of available build targets
 ```
 SHELL = /bin/bash
 export BUILD_HARNESS_PATH ?= $(shell until [ -d "build-harness" ] || [ "`pwd`" == '/' ]; do cd ..; done; pwd)/build-harness/
-include $(BUILD_HARNESS_PATH)/Makefile.shim
+-include $(BUILD_HARNESS_PATH)/Makefile.shim
 ```
 
 The default `BUILD_HARNESS_PATH` resolves to the first directory we can find by traversing up the tree until we find one named `build-harness`. e.g. We can override this behavior by setting `BUILD_HARNESS_PATH=/opt/build-harness`
@@ -88,82 +88,6 @@ You can chain targets together as well or even override environment settings, li
 
     make docker:build docker:tag docker:push DOCKER_TAG=foobar
 
-## CircleCI Integration
-
-CircleCI will use the `circle` tag of build-harness. Once your build-harness change is merged into master, please advance the `circle` tag. You can also temporarily tag your branch with this tag to test your changes.
-
-Here's a minimal example of what is needed for CircleCI. Add/merge the following to your projects `.circleci/config.yml` file.
-```yaml
-version: 2
-
-references:
-  container_config: &container_config
-    docker:
-      - image: circleci/node:7.10.1 # Choose base docker image for your build, https://hub.docker.com/u/circleci/ has some
-    working_directory: ~/chat-sdk # This should match your project's name
-
-  download_build_harness: &download_build_harness
-    run:
-        name: Download build-harness
-        command: curl --retry 5 --retry-delay 1 https://raw.githubusercontent.com/sagansystems/build-harness/master/bin/circleci.sh | bash -x -s
-
-jobs:
-  build:
-    <<: *container_config
-    steps:
-      - setup_remote_docker:
-          reusable: true
-      - checkout
-      - *download_build_harness
-      - run: make docker:login circle:cleanup-docker
-      - run:
-          name: Build
-          command: make docker:build
-
-  deploy:
-    <<: *container_config
-    steps:
-      - setup_remote_docker:
-          reusable: true
-      - checkout
-      - *download_build_harness
-      - run: make docker:login
-      - run:
-          name: Tag images
-          command: make circle:tag          # Tag and publish using branch and build number
-      - run:
-          name: Tag images as latest
-          command: |
-            if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
-              make circle:tag-latest   # Tag as latest, only on master
-            fi
-      - deploy:
-          name: Deploy to master cluster
-          command: |
-            if [[ "${CIRCLE_BRANCH}" == "master" ]]; then
-              make kubernetes:deploy:  # Deloy to master.gladly.com
-            fi
-          environment:
-            CLUSTER_NAMESPACE: master
-            CLUSTER_DOMAIN: gladly.com
-
-workflows:
-  version: 2
-  build-and-deploy:
-    jobs:
-      - build
-      - deploy:
-          requires:
-            - build
-          filters:
-            branches:
-              only:
-                - master
-                - /release.*/
-                - /.*migration.*/
-```
-
-
 ## Codefresh Integration
 
 Codefresh will use the `codefresh` tag of build-harness. Once your build-harness change is merged into master, please advance the `codefresh` tag. You can also temporarily tag your branch with this tag to test your changes.
@@ -185,3 +109,12 @@ Here's a minimal example of what is needed for Codefresh. Add/merge the followin
         only:
           - master
 ```
+
+## Versioning
+
+Build-harness is used in upstream repositories, so after merging changes to master please do the following:
+- publish new [build-harness release](https://github.com/sagansystems/build-harness/releases) - Codefresh will automatically build build-harness image with this tag
+- advance the `codefresh` [tag in build-harness](https://github.com/sagansystems/build-harness/tree/codefresh) to point to the tip of master - this will update the image used in Codefresh pipelines
+- point `release-harness` Dockerfile [BUILD_HARNESS_VERSION](https://github.com/sagansystems/release-harness/blob/master/Dockerfile) to the newly created release (not to the `codefresh` tag) and merge that change to release-harness master
+- publish new [release-harness release](https://github.com/sagansystems/release-harness/releases) - Codefresh will automatically build `build-harness` image with this tag
+- point [gladly-release Dockerfile](https://github.com/sagansystems/gladly-release/blob/master/Dockerfile) to the newly created `release-harness` release and merge that change to `gladly-release` master. No need to create any new `gladly-release` release
