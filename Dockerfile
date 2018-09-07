@@ -27,6 +27,10 @@ ENV KUBECTL /usr/local/bin/kubectl
 ENV KUBEUTIL $BUILD_HARNESS_PATH/kube-util
 WORKDIR $BUILD_HARNESS_PATH
 
+ENV USER gladly
+RUN addgroup -S $USER && adduser -S $USER $USER
+USER $USER
+
 COPY . .
 
 ENTRYPOINT ["/bin/bash"]
