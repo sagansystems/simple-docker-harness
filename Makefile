@@ -9,6 +9,19 @@ green = \x1b[32;01m$1\x1b[0m
 yellow = \x1b[33;01m$1\x1b[0m
 red = \x1b[33;31m$1\x1b[0m
 
+ifeq ($(strip $(CLUSTER)),)
+	CLUSTER = $(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN)
+else
+	TEMP_CLUSTER_PARTS = $(subst ., ,$(CLUSTER))
+	TEMP_CLUSTER_DOMAIN_PARTS = $(wordlist 2,$(words $(TEMP_CLUSTER_PARTS)), $(TEMP_CLUSTER_PARTS))
+	CLUSTER_NAMESPACE = $(word 1,$(TEMP_CLUSTER_PARTS))
+	CLUSTER_DOMAIN = $(word 1,$(TEMP_CLUSTER_DOMAIN_PARTS)).$(word 2,$(TEMP_CLUSTER_DOMAIN_PARTS))
+endif
+
+export CLUSTER
+export CLUSTER_NAMESPACE
+export CLUSTER_DOMAIN
+
 define print
 	@echo "$@: $1"
 endef
@@ -49,7 +62,11 @@ include $(MAKEFILE_DIR)/modules/Makefile.help
 
 .DEFAULT_GOAL := help
 
+print-cluster:
+	@echo "CLUSTER: ${CLUSTER}"
+	@echo "CLUSTER_NAMESPACE: ${CLUSTER_NAMESPACE}"
+	@echo "CLUSTER_DOMAIN: ${CLUSTER_DOMAIN}"
+
 # (private) Configure all dependencies
 deps::
 	@exit 0
-

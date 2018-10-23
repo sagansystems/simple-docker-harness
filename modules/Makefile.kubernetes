@@ -1,10 +1,4 @@
-CLUSTER_NAMESPACE ?=
-CLUSTER_DOMAIN ?= gladly.qa
-CLUSTER ?= $(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN)
 CLUSTER_BASTION ?= bastion.$(CLUSTER)
-export CLUSTER
-export CLUSTER_NAMESPACE
-
 KUBERNETES_ANNOTATION ?= $(shell date -u +'%Y-%m-%d %H:%M:%SZ')
 KUBERNETES_APP ?= $(subst -docker,,$(shell basename "`pwd`"))
 KUBERNETES_RESOURCE_PATH ?= ./kubernetes
@@ -32,21 +26,21 @@ endef
 define kubectl_apply
 	$(call assert,CLUSTER_NAMESPACE)
 	$(call assert,CLUSTER_DOMAIN)
-	@echo -e "INFO: Applying changes to $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Applying changes to $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER))..."
 	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) apply $(2) -f -
 endef
 
 define kubectl_create
 	$(call assert,CLUSTER_NAMESPACE)
 	$(call assert,CLUSTER_DOMAIN)
-	@echo -e "INFO: Creating $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Creating $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER))..."
 	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) create -f -
 endef
 
 define kubectl_delete
 	$(call assert,CLUSTER_NAMESPACE)
 	$(call assert,CLUSTER_DOMAIN)
-	@echo -e "INFO: Deleteting $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER_NAMESPACE))..."
+	@echo -e "INFO: Deleteting $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER))..."
 	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) delete --ignore-not-found=true -f -
 endef
 
