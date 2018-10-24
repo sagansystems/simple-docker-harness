@@ -145,6 +145,10 @@ kubernetes\:delete-service:
 kubernetes\:apply-service:
 	$(call kubectl_apply,service,--force)
 
+# (private) Update service or create, if necessary
+kubernetes\:apply-cronjob:
+	$(call kubectl_apply,cronjob,--force)
+
 # (private) Delete a controller
 kubernetes\:delete-controller:
 	$(call kubectl_delete,controller)
@@ -175,6 +179,7 @@ kubernetes\:deploy:
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" ] || $(SELF) kubernetes:apply-controller || $(NOTIFY_FAILURE)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml" ] || $(SELF) kubernetes:apply-service || $(NOTIFY_FAILURE)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-horizontalpodautoscaler.yml" ] || $(SELF) kubernetes:apply-horizontalpodautoscaler || $(NOTIFY_FAILURE)
+	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-cronjob.yml" ] || $(SELF) kubernetes:apply-cronjob || $(NOTIFY_FAILURE)
 	$(NOTIFY_SUCCESS)
 
 # (private) Validate a job
@@ -212,7 +217,7 @@ kubernetes\:list-rc:
 ## List deployed replica sets for app
 kubernetes\:list-rs:
 	@echo -e "INFO: Listing replica sets for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
-	@$(KUBECTL_CMD) get rs -L tag --selector app=$(KUBERNETES_APP) | grep -Ev '\s+0\s+0\s+'
+	@$(KUBECTL_CMD) get rs -L tag --selector app=$(KUBERNETES_APP) | grep -Ev '\s+0\s+0\s+' || true
 
 ## List deployed pods for app
 kubernetes\:list-pods:
@@ -223,6 +228,11 @@ kubernetes\:list-pods:
 kubernetes\:list-svc:
 	@echo -e "INFO: Listing services on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) get svc
+
+## List cronjobs
+kubernetes\:list-cronjobs:
+	@echo -e "INFO: Listing cronjobs on cluster $(call yellow,$(CLUSTER))..."
+	@$(KUBECTL_CMD) get cronjobs
 
 ## Show deployment history
 kubernetes\:deployment-history:
