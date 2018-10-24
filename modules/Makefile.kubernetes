@@ -231,7 +231,7 @@ kubernetes\:list-svc:
 
 ## List cronjobs
 kubernetes\:list-cronjobs:
-	@echo -e "INFO: Listing cronjobs on cluster $(call yellow,$(CLUSTER))..."
+	@echo -e "INFO: Listing cronjobs for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) get cronjobs --selector app=$(KUBERNETES_APP)
 
 ## Show deployment history
