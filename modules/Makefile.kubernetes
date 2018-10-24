@@ -217,7 +217,7 @@ kubernetes\:list-rc:
 ## List deployed replica sets for app
 kubernetes\:list-rs:
 	@echo -e "INFO: Listing replica sets for $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
-	@$(KUBECTL_CMD) get rs -L tag --selector app=$(KUBERNETES_APP) | grep -Ev '\s+0\s+0\s+'
+	@$(KUBECTL_CMD) get rs -L tag --selector app=$(KUBERNETES_APP) | grep -Ev '\s+0\s+0\s+' || true
 
 ## List deployed pods for app
 kubernetes\:list-pods:
