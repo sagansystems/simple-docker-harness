@@ -61,7 +61,7 @@ codefresh\:deploy-kubernetes:
 	@echo -e "INFO: Deploying $(IMAGE_TAG)"
 	@$(SELF) kubernetes:deploy KUBERNETES_ANNOTATION="$(RELEASE): $(BUILD) - commit $(COMMIT)"
 	@sleep 3
-	@$(SELF) kubernetes:list-deployments kubernetes:list-rs kubernetes:list-pods
+	@$(SELF) kubernetes:list-deployments kubernetes:list-rs kubernetes:list-pods kubernetes:list-cronjobs
 
 ## Tag image as [branch]-docker-latest and deploy to the cluster
 codefresh\:tag-deploy-cluster:
