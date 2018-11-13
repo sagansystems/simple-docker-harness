@@ -25,6 +25,7 @@ ENV BUILD_HARNESS_PATH /gladly/build-harness
 ENV KUBECTL_CMD /usr/local/bin/kubectl
 ENV KUBECTL /usr/local/bin/kubectl
 ENV KUBEUTIL $BUILD_HARNESS_PATH/kube-util
+ENV KUBECTL_STATUS false
 WORKDIR $BUILD_HARNESS_PATH
 
 COPY . .
