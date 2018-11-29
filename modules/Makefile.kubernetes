@@ -193,7 +193,7 @@ kubernetes\:delete-job:
 ## Run a job
 kubernetes\:run-job:
 	@$(SELF) kubernetes:validate-job
-	@$(SELF) kubernetes:delete-job >/dev/null 2>&1 || true
+	@$(SELF) kubernetes:delete-job 2>&1 || true
 	$(call kubectl_create,job)
 
 ## Show job logs and return job exit code, requires SSH if ran outside Codefresh
