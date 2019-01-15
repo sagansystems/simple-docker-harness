@@ -1,6 +1,6 @@
 FROM alpine:3.8
 
-ARG KUBE_VERSION="v1.8.10"
+ARG KUBE_VERSION="v1.10.11"
 
 RUN apk add --no-cache --update bash && \
     apk add ca-certificates && update-ca-certificates && \
