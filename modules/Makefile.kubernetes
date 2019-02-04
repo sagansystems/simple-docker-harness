@@ -6,8 +6,8 @@ KUBERNETES_RESOURCE_VALIDATION ?= configmap
 export KUBERNETES_APP
 
 # Kubectl specific settings
-KUBECTL ?= /opt/bin/kubectl
-KUBEUTIL ?= /opt/bin/kube-util
+KUBECTL ?= /usr/local/bin/kubectl
+KUBEUTIL ?= $(MAKEFILE_DIR)/kube-util
 
 # Flag to control whether or not `kubernetes:status` is called on deployments
 KUBECTL_STATUS ?= true
@@ -45,54 +45,16 @@ define kubectl_delete
 endef
 
 ifeq ($(CIRCLECI),true)
-  KUBECTL_SSH_USER ?= saganbot
   CLUSTER_NAMESPACE ?= $(CIRCLE_BRANCH)
-endif
-
-ifeq ($(strip $(KUBECTL_SSH_USER)),)
-	KUBECTL_SSH_USER = root
 endif
 
 SSH_PROXY_OPTIONS := -i ~/.tsh/keys/portal.$(CLUSTER)/$(OKTA_USER) -o ProxyCommand='ssh -p 3023 -i ~/.tsh/keys/portal.$(CLUSTER)/$(OKTA_USER) $(KUBECTL_SSH_USER)@portal.$(CLUSTER) -s proxy:bastion.$(CLUSTER):3022' portal.$(CLUSTER)
 
-# More kubectl specific settings
-KUBECTL_SSH_SOCK ?= /tmp/kubectl-$(CLUSTER_BASTION)
-KUBECTL_SSH_OPTS := -l $(KUBECTL_SSH_USER) -A -o 'LogLevel=error' -o 'StrictHostKeyChecking=no' -o 'UserKnownHostsFile=/dev/null' -S $(KUBECTL_SSH_SOCK)
-KUBECTL_SSH_CMD := ssh $(KUBECTL_SSH_OPTS)
-
-# Add the SSH endpoint to the command; everything after the host is expected to be a remote command
-KUBECTL_SSH_CMD += $(CLUSTER_BASTION)
-
-KUBECTL_CMD ?= $(KUBECTL_SSH_CMD) "$(KUBECTL)" --logtostderr=true --insecure-skip-tls-verify=true
-ifeq ($(CIRCLE_VERSION),"1.0")
-  KUBECTL_SSH_CMD += -i '$(HOME)/.ssh/id_circleci_github'
-endif
-
-#
-# Reference Docs:
-#  - https://cloud.google.com/container-engine/docs/kubectl/
-#
-## Bring up SSH tunnel for kubernetes commands, must be called before executing any targets
-## Skip on Codefresh indicated when CF_BUILD_ID is present
-## We skip tunnel up on Codefresh because it has direct access to kubernetes
-kubernetes\:tunnel-up:
-	@if [ -z "$(CF_BUILD_ID)" ]; then \
-		tsh login --proxy=portal.$(CLUSTER); \
-		ssh $(SSH_PROXY_OPTIONS) $(KUBECTL_SSH_OPTS) -M -f -N $(CLUSTER); \
-	fi;
-
-## Tear down kubernetes SSH tunnel, must be called after executing other targets
-## Skip on Codefresh indicated when CF_BUILD_ID is present
-## We skip tunnel up on Codefresh because it has direct access to kubernetes
-kubernetes\:tunnel-down:
-	@if [ -z "$(CF_BUILD_ID)" ]; then \
-		[ -e $(KUBECTL_SSH_SOCK) ] && ssh -S $(KUBECTL_SSH_SOCK) -O exit $(CLUSTER); \
-	fi;
+KUBECTL_CMD ?= "$(KUBECTL)" --logtostderr=true --insecure-skip-tls-verify=true
 
 ## Display info about the kubernetes setup
 kubernetes\:info:
 	@echo -e "Cluster: $(call yellow,$(CLUSTER))"
-	@echo -e "SSH User: $(call yellow,$(KUBECTL_SSH_USER))"
 
 # (private) Validate a configuration
 kubernetes\:validate:
@@ -199,11 +161,7 @@ kubernetes\:run-job:
 ## Show job logs and return job exit code, requires SSH if ran outside Codefresh
 kubernetes\:job-logs:
 	@echo -e "INFO: Monitoring job $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
-	@if [ -z "$(CF_BUILD_ID)" ]; then \
-	  $(KUBECTL_SSH_CMD) $(KUBEUTIL) tail-job $(KUBERNETES_APP); \
-	else \
-	  $(KUBEUTIL) tail-job $(KUBERNETES_APP); \
-	fi
+	$(KUBEUTIL) tail-job $(KUBERNETES_APP); \
 
 ## Output the status of the deployment
 kubernetes\:status:
