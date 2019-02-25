@@ -32,7 +32,7 @@ codefresh\:git-tag-docker-latest: codefresh\:deps
 	@$(call assert_set,COMMIT)
 	@$(call assert_set,CF_BRANCH_TAG_NORMALIZED)
 	@echo "INFO: Tagging git $(COMMIT) as $(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
-	@git fetch --tags
+	@git fetch --tags --force
 	@git tag --force "$(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
 	@git push origin --force "tags/$(CF_BRANCH_TAG_NORMALIZED)-docker-latest"
 
