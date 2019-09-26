@@ -20,6 +20,11 @@ export SERIAL
 DEBUG ?= /dev/null
 
 define envsubst
+	# Optionally load parameters for the kubernetes resources
+	set -a; \
+	source $(KUBERNETES_RESOURCE_PATH)/config/default.k8sparameters || true; \
+	source $(KUBERNETES_RESOURCE_PATH)/config/$(CLUSTER_NAMESPACE).$(CLUSTER_DOMAIN).k8sparameters || true; \
+	set +a; \
 	envsubst < "$(1)" | envsubst | tee $(DEBUG)
 endef
 
