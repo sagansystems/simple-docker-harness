@@ -110,6 +110,18 @@ Here's a minimal example of what is needed for Codefresh. Add/merge the followin
           - master
 ```
 
+## Per-cluster configuration of Kubernetes resources
+
+To customize Kubernetes resources per cluster, do the following:
+1. Create `./config` folder in the same folder as k8s manifest files for the service.
+2. At minimum create 2 files in that folder: `default.k8sparameters` and `<cluster.fqdn>.k8sparameters`.
+3. In these files use a `KEY=VALUE` notation. We leverage environment variables to populate k8s manifests, so think of the file as something you would `source`.
+4. Replace values in the k8s manifest with environment variable references to the newly introduced keys.
+
+See [this pull request](https://github.com/sagansystems/edge-broker/pull/383/files) for reference.
+
+**NOTE** Always set defaults for all values in the `default.k8sparameters` file. And make sure `production1.gladly.com.k8sparameters` and `scaletest.gladly.qa.k8sparameters` are in sync.
+
 ## Versioning
 
 Build-harness is used in upstream repositories, so after merging changes to master please do the following:
