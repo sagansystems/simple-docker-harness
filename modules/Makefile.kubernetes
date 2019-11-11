@@ -138,10 +138,20 @@ kubernetes\:undo-deployment:
 	@echo -e "INFO: Rolling back to previous deployment of $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) rollout undo deployment $(KUBERNETES_APP)
 
+# (private) Delete a poddisruptionbudget
+kubernetes\:delete-poddisruptionbudget:
+	$(call kubectl_delete,poddisruptionbudget)
+
+# (private) Update existing poddisruptionbudget or create, if necessary
+kubernetes\:apply-poddisruptionbudget:
+	$(call kubectl_apply,poddisruptionbudget)
+	@[ "$(KUBECTL_STATUS)" != "true" ] || time $(SELF) kubernetes:status
+
 ## Deploy everything that needs to be deployed; notify datadog
 kubernetes\:deploy:
 	@echo -e "INFO: Deploying $(KUBERNETES_APP) resources on cluster $(call yellow,$(CLUSTER))..."
 	$(NOTIFY_STARTING)
+	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-poddisruptionbudget.yml" ] || $(SELF) kubernetes:apply-poddisruptionbudget || $(NOTIFY_FAILURE)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-deployment.yml" ] || $(SELF) kubernetes:apply-deployment || $(NOTIFY_FAILURE)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-controller.yml" ] || $(SELF) kubernetes:apply-controller || $(NOTIFY_FAILURE)
 	@[ ! -f "$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-service.yml" ] || $(SELF) kubernetes:apply-service || $(NOTIFY_FAILURE)
