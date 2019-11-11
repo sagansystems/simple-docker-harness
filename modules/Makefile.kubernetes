@@ -217,4 +217,8 @@ kubernetes\:list-deployments:
 	@echo -e "INFO: Listing deployments on cluster $(call yellow,$(CLUSTER))..."
 	@$(KUBECTL_CMD) get deployments -L tag
 
+## List everything that's deployed
+kubernetes\:list-pdbs:
+	@echo -e "INFO: Listing pod disruption budgets on cluster $(call yellow,$(CLUSTER))..."
+	@$(KUBECTL_CMD) get pdb -L tag
 
