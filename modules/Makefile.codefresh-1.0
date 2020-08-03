@@ -17,6 +17,8 @@ export CI_BRANCH ?= $(CF_BRANCH_TAG_NORMALIZED)
 export COMMIT
 export RELEASE
 
+export KUBERNETES_JOB_NAME_SUFFIX ?= $(JOB_KUBERNETES_NAME_SUFFIX)
+
 ## Install Codefresh deps
 codefresh\:deps:
 	@$(call assert_set,SSH_KEY)
