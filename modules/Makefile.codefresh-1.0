@@ -17,6 +17,8 @@ export CI_BRANCH ?= $(CF_BRANCH_TAG_NORMALIZED)
 export COMMIT
 export RELEASE
 
+export KUBERNETES_JOB_NAME_SUFFIX ?= $(JOB_KUBERNETES_NAME_SUFFIX)
+
 ## Install Codefresh deps
 codefresh\:deps:
 	@$(call assert_set,SSH_KEY)
@@ -75,4 +77,4 @@ codefresh\:run-job-kubernetes:
 	$(call assert,JOB_KUBERNETES_APP)
 	@$(SELF) codefresh:set-context
 	@echo -e "INFO: Running $(JOB_KUBERNETES_APP):$(IMAGE_TAG) on $(CODEFRESH_KUBERNETES_CONTEXT)"
-	@$(SELF) kubernetes:run-job kubernetes:job-logs KUBERNETES_APP=$(JOB_KUBERNETES_APP)
+	@$(SELF) kubernetes:run-job kubernetes:job-logs KUBERNETES_APP=$(JOB_KUBERNETES_APP) KUBERNETES_JOB_NAME_SUFFIX=$(JOB_KUBERNETES_NAME_SUFFIX)

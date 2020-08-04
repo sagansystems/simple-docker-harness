@@ -45,7 +45,7 @@ endef
 define kubectl_delete
 	$(call assert,CLUSTER_NAMESPACE)
 	$(call assert,CLUSTER_DOMAIN)
-	@echo -e "INFO: Deleteting $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER))..."
+	@echo -e "INFO: Deleting $(KUBERNETES_APP) $(1) on cluster $(call yellow,$(CLUSTER))..."
 	@$(call envsubst,$(KUBERNETES_RESOURCE_PATH)/$(KUBERNETES_APP)-$(1).yml) | $(KUBECTL_CMD) delete --ignore-not-found=true -f -
 endef
 
@@ -175,8 +175,8 @@ kubernetes\:run-job:
 
 ## Show job logs and return job exit code, requires SSH if ran outside Codefresh
 kubernetes\:job-logs:
-	@echo -e "INFO: Monitoring job $(KUBERNETES_APP) on cluster $(call yellow,$(CLUSTER))..."
-	$(KUBEUTIL) tail-job $(KUBERNETES_APP); \
+	@echo -e "INFO: Monitoring job $(KUBERNETES_APP)$(KUBERNETES_JOB_NAME_SUFFIX) on cluster $(call yellow,$(CLUSTER))..."
+	$(KUBEUTIL) tail-job $(KUBERNETES_APP)$(KUBERNETES_JOB_NAME_SUFFIX); \
 
 ## Output the status of the deployment
 kubernetes\:status:
